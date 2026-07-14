@@ -442,6 +442,43 @@ function getMonthlyAttendance(request) {
   };
 }
 
+function getAttendanceByRange(request) {
+  const input = request || {};
+  const employeeId = String(input.employeeId || '').trim();
+  const startDate = parseIsoDateText(input.startDate);
+  const endDate = parseIsoDateText(input.endDate);
+
+  if (!employeeId || !startDate || !endDate) {
+    throw new Error('조회할 사번과 기간을 확인해 주세요.');
+  }
+
+  if (startDate.getTime() > endDate.getTime()) {
+    throw new Error('시작일은 종료일보다 늦을 수 없습니다.');
+  }
+
+  const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
+  const employee = findEmployeeById(ss, employeeId);
+
+  if (!employee) {
+    throw new Error('등록된 사번을 찾을 수 없습니다.');
+  }
+
+  const sheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
+  const block = findEmployeeBlock(sheet, employee.name);
+  const attendanceRows = readAttendanceRows(sheet, block);
+  const rows = filterAttendanceRowsByRange(attendanceRows, startDate, endDate);
+
+  return {
+    ok: true,
+    employee,
+    startDate: formatIsoDate(startDate),
+    endDate: formatIsoDate(endDate),
+    rows,
+    summary: summarizeAttendanceRows(rows),
+    statistics: buildAttendanceStatistics(attendanceRows, rows, endDate)
+  };
+}
+
 function getAdminDashboard(request) {
   const input = request || {};
   const filters = {
@@ -1086,6 +1123,16 @@ function filterAttendanceRowsByMonth(rows, year, month) {
   });
 }
 
+function filterAttendanceRowsByRange(rows, startDate, endDate) {
+  const startTimestamp = stripTime(startDate).getTime();
+  const endTimestamp = stripTime(endDate).getTime();
+
+  return rows.filter(function (row) {
+    const timestamp = attendanceDateToTimestamp(row.date);
+    return timestamp >= startTimestamp && timestamp <= endTimestamp;
+  });
+}
+
 function buildAttendanceRow(dateText, day, row, block) {
   const start = block.startColumn - 1;
   const clockIn = cleanSheetDisplay(row[start]);
@@ -1243,6 +1290,21 @@ function parseSheetDateText(value) {
   };
 }
 
+function parseIsoDateText(value) {
+  const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return date.getFullYear() === Number(match[1])
+    && date.getMonth() === Number(match[2]) - 1
+    && date.getDate() === Number(match[3])
+    ? date
+    : null;
+}
+
 function computeWorkMinutes(clockInText, clockOutText) {
   const clockIn = parseTimeToMinutes(clockInText);
   const clockOut = parseTimeToMinutes(clockOutText);
@@ -1384,6 +1446,10 @@ function stripTime(dateValue) {
 
 function formatDate(dateValue) {
   return Utilities.formatDate(dateValue, CONFIG.timezone, 'yyyy. M. d');
+}
+
+function formatIsoDate(dateValue) {
+  return Utilities.formatDate(dateValue, CONFIG.timezone, 'yyyy-MM-dd');
 }
 
 function formatTime(dateValue) {

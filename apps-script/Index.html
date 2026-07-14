@@ -1193,6 +1193,41 @@
     .stats-view { width: 100%; max-width: 900px; margin: 0 auto; }
     .stats-header { margin-bottom: 18px; }
     .stats-header h1 { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.12; }
+    .stats-segments {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px;
+      margin-bottom: 16px;
+      padding: 4px;
+      border-radius: 16px;
+      background: #e9edf3;
+    }
+    .stats-segments button {
+      min-width: 0;
+      height: 42px;
+      padding: 0 10px;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      transition: background .16s ease, color .16s ease, box-shadow .16s ease, transform .12s ease;
+    }
+    .stats-segments button.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
+    }
+    .stats-segments button:active { transform: scale(.98); }
+    .stats-period {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 0 2px;
+    }
+    .stats-period span { display: block; color: var(--faint); font-size: 11px; font-weight: 500; }
+    .stats-period strong { display: block; margin-top: 5px; font-size: 16px; font-variant-numeric: tabular-nums; font-weight: 650; }
     .stats-month-nav {
       display: grid;
       grid-template-columns: 40px minmax(140px, auto) 40px;
@@ -1235,6 +1270,7 @@
     .stats-time-grid,
     .stats-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .stats-time-grid .stats-summary-card:first-child { grid-column: 1 / -1; }
+    .stats-time-grid.compact-two .stats-summary-card:first-child { grid-column: auto; }
     .stats-summary-card {
       min-height: 118px;
       padding: 20px;
@@ -1264,11 +1300,74 @@
     .stats-info-value { font-size: 21px; font-variant-numeric: tabular-nums; font-weight: 700; }
     .stats-view.loading .stats-summary-value,
     .stats-view.loading .stats-info-value { color: transparent; border-radius: 6px; background: #edf1f6; }
+    .stats-view.updating .stats-summary-value,
+    .stats-view.updating .stats-info-value { opacity: .35; }
+    .stats-summary-value,
+    .stats-info-value { transition: opacity .16s ease; }
+    .stats-range-modal {
+      position: fixed;
+      z-index: 50;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, .34);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+      backdrop-filter: blur(3px);
+    }
+    .stats-range-modal.open { opacity: 1; pointer-events: auto; }
+    .stats-range-dialog {
+      width: min(100%, 390px);
+      padding: 22px;
+      border: 1px solid rgba(220, 228, 239, .9);
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 20px 48px rgba(15, 23, 42, .14);
+      opacity: 0;
+      transform: translateY(8px) scale(.985);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .stats-range-modal.open .stats-range-dialog { opacity: 1; transform: translateY(0) scale(1); }
+    .stats-range-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .stats-range-head h2 { margin: 0; font-size: 18px; font-weight: 650; }
+    .stats-range-close {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 12px;
+      color: var(--muted);
+    }
+    .stats-range-close:hover { background: var(--blue-soft); color: var(--blue); }
+    .stats-range-fields { display: grid; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); align-items: end; gap: 10px; margin-top: 22px; }
+    .stats-range-fields label span { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 550; }
+    .stats-range-fields input {
+      width: 100%;
+      height: 48px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+    }
+    .stats-range-fields > span { padding-bottom: 15px; color: var(--faint); text-align: center; }
+    .stats-range-error { min-height: 18px; margin: 10px 0 0; color: #dc2626; font-size: 11px; }
+    .stats-range-actions { display: grid; grid-template-columns: 1fr 1.35fr; gap: 10px; margin-top: 12px; }
+    .stats-range-actions button { height: 50px; border-radius: 16px; font-size: 13px; font-weight: 650; }
+    .stats-range-cancel { border: 1px solid var(--line); background: #fff; color: var(--muted); }
+    .stats-range-apply { background: var(--blue); color: #fff; }
 
     @media (max-width: 600px) {
       .stats-view { width: auto; margin-inline: 6px; }
       .stats-header { margin-bottom: 16px; }
       .stats-header h1 { font-size: 27px; }
+      .stats-segments button { height: 40px; font-size: 12px; }
+      .stats-period { margin-bottom: 18px; }
+      .stats-period strong { font-size: 15px; }
       .stats-today-row { margin-bottom: 22px; }
       .stats-section { margin-top: 22px; }
       .stats-time-grid,
@@ -1277,6 +1376,9 @@
       .stats-summary-value { margin-top: 13px; font-size: 22px; }
       .stats-info-row { min-height: 76px; padding: 14px 17px; }
       .stats-info-value { font-size: 20px; }
+      .stats-range-dialog { padding: 20px; }
+      .stats-range-fields { grid-template-columns: 1fr; align-items: stretch; }
+      .stats-range-fields > span { padding: 0; }
     }
 
     .admin-view { width: 100%; max-width: 980px; margin: 0 auto; }
@@ -2032,26 +2134,38 @@
         <div class="stats-view" id="statsView">
           <header class="stats-header"><h1>통계</h1></header>
 
-          <div class="stats-month-nav" aria-label="통계 월 선택">
-            <button id="statsPrevMonth" type="button" aria-label="이전 달"><span class="material-symbols-rounded" aria-hidden="true">chevron_left</span></button>
-            <strong id="statsMonthLabel">2026년 7월</strong>
-            <button id="statsNextMonth" type="button" aria-label="다음 달"><span class="material-symbols-rounded" aria-hidden="true">chevron_right</span></button>
+          <div class="stats-segments" role="tablist" aria-label="통계 조회 기간">
+            <button type="button" role="tab" data-stats-mode="week" aria-selected="false">이번 주</button>
+            <button class="active" type="button" role="tab" data-stats-mode="month" aria-selected="true">이번 달</button>
+            <button type="button" role="tab" data-stats-mode="range" aria-selected="false">기간 선택</button>
           </div>
-          <div class="stats-today-row"><button class="stats-today-btn" id="statsTodayMonth" type="button">오늘</button></div>
+
+          <div class="stats-period" aria-live="polite">
+            <div><span>조회기간</span><strong id="statsPeriodLabel">-</strong></div>
+          </div>
+
+          <div id="statsMonthControls">
+            <div class="stats-month-nav" aria-label="통계 월 선택">
+              <button id="statsPrevMonth" type="button" aria-label="이전 달"><span class="material-symbols-rounded" aria-hidden="true">chevron_left</span></button>
+              <strong id="statsMonthLabel">2026년 7월</strong>
+              <button id="statsNextMonth" type="button" aria-label="다음 달"><span class="material-symbols-rounded" aria-hidden="true">chevron_right</span></button>
+            </div>
+            <div class="stats-today-row"><button class="stats-today-btn" id="statsTodayMonth" type="button">오늘</button></div>
+          </div>
 
           <section class="stats-section" aria-labelledby="statsWorkTimeTitle">
-            <div class="stats-section-head"><h2 id="statsWorkTimeTitle">근무시간</h2><span>월요일~일요일 기준</span></div>
+            <div class="stats-section-head"><h2 id="statsWorkTimeTitle">근무시간</h2></div>
             <div class="stats-time-grid">
-              <article class="stats-summary-card"><div class="stats-summary-head"><span>이번 주 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">date_range</span></div><div class="stats-summary-value" id="statsWeeklyWork">0시간</div></article>
-              <article class="stats-summary-card"><div class="stats-summary-head"><span>이번 달 총 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">schedule</span></div><div class="stats-summary-value" id="statsTotalWork">0시간</div></article>
+              <article class="stats-summary-card" id="statsWeeklyCard"><div class="stats-summary-head"><span>이번 주 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">date_range</span></div><div class="stats-summary-value" id="statsWeeklyWork">0시간</div></article>
+              <article class="stats-summary-card" id="statsTotalWorkCard"><div class="stats-summary-head"><span id="statsTotalWorkLabel">이번 달 총 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">schedule</span></div><div class="stats-summary-value" id="statsTotalWork">0시간</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>평균 일일 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">avg_time</span></div><div class="stats-summary-value" id="statsAverageDailyWork">0시간</div></article>
             </div>
           </section>
 
           <section class="stats-section" aria-labelledby="statsSummaryTitle">
-            <div class="stats-section-head"><h2 id="statsSummaryTitle">월간 상세</h2><span>선택한 월 누적</span></div>
+            <div class="stats-section-head"><h2 id="statsSummaryTitle">월간 상세</h2></div>
             <div class="stats-summary-grid">
-              <article class="stats-summary-card"><div class="stats-summary-head"><span>총 출근일수</span><span class="material-symbols-rounded" aria-hidden="true">calendar_month</span></div><div class="stats-summary-value" id="statsWorkDays">0일</div></article>
+              <article class="stats-summary-card"><div class="stats-summary-head"><span>총 근무일수</span><span class="material-symbols-rounded" aria-hidden="true">calendar_month</span></div><div class="stats-summary-value" id="statsWorkDays">0일</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>총 조출시간</span><span class="material-symbols-rounded" aria-hidden="true">wb_twilight</span></div><div class="stats-summary-value" id="sumEarly">0시간</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>총 잔업시간</span><span class="material-symbols-rounded" aria-hidden="true">more_time</span></div><div class="stats-summary-value" id="sumOvertime">0시간</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>총 OT</span><span class="material-symbols-rounded" aria-hidden="true">timer</span></div><div class="stats-summary-value" id="sumOt">0시간</div></article>
@@ -2059,7 +2173,7 @@
           </section>
 
           <section class="stats-section" aria-labelledby="statsInfoTitle">
-            <div class="stats-section-head"><h2 id="statsInfoTitle">근무 정보</h2><span>실제 등록시간 평균</span></div>
+            <div class="stats-section-head"><h2 id="statsInfoTitle">근무 정보</h2></div>
             <div class="stats-info-card">
               <div class="stats-info-row">
                 <span class="stats-info-icon"><span class="material-symbols-rounded" aria-hidden="true">login</span></span>
@@ -2073,6 +2187,25 @@
               </div>
             </div>
           </section>
+        </div>
+
+        <div class="stats-range-modal" id="statsRangeModal" role="dialog" aria-modal="true" aria-labelledby="statsRangeTitle" aria-hidden="true">
+          <div class="stats-range-dialog" role="document">
+            <div class="stats-range-head">
+              <h2 id="statsRangeTitle">조회기간 선택</h2>
+              <button class="stats-range-close" id="statsRangeClose" type="button" aria-label="기간 선택 닫기"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+            </div>
+            <div class="stats-range-fields">
+              <label><span>시작일</span><input id="statsRangeStart" type="date"></label>
+              <span aria-hidden="true">~</span>
+              <label><span>종료일</span><input id="statsRangeEnd" type="date"></label>
+            </div>
+            <p class="stats-range-error" id="statsRangeError" role="alert"></p>
+            <div class="stats-range-actions">
+              <button class="stats-range-cancel" id="statsRangeCancel" type="button">취소</button>
+              <button class="stats-range-apply" id="statsRangeApply" type="button">조회하기</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -2323,7 +2456,10 @@
       historyMonth: null,
       historyRows: [],
       selectedAttendanceDate: null,
+      statsMode: "month",
       statsMonth: null,
+      statsPeriod: null,
+      statsRange: null,
       statsCache: {},
       statsRequests: {},
       clockTimer: null,
@@ -2659,7 +2795,7 @@
       navButtons.forEach((button) => button.classList.toggle("active", button.dataset.view === id));
       views.forEach((view) => view.classList.toggle("active", view.id === id));
       if (id === "stats") {
-        loadStatsMonth(state.statsMonth || new Date());
+        loadStatsView();
       }
       if (id === "admin" && !state.admin) {
         refreshAdmin(null);
@@ -2914,6 +3050,63 @@
       return new Date(date.getFullYear(), date.getMonth(), 1);
     }
 
+    function formatStatsInputDate(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+    }
+
+    function parseStatsInputDate(value) {
+      const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return null;
+      const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      return date.getFullYear() === Number(match[1]) && date.getMonth() === Number(match[2]) - 1 && date.getDate() === Number(match[3])
+        ? date
+        : null;
+    }
+
+    function getStatsMonthPeriod(value) {
+      const month = getStatsMonthDate(value);
+      return {
+        start: new Date(month.getFullYear(), month.getMonth(), 1),
+        end: new Date(month.getFullYear(), month.getMonth() + 1, 0)
+      };
+    }
+
+    function getCurrentStatsWeekPeriod() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const mondayOffset = today.getDay() === 0 ? 6 : today.getDay() - 1;
+      const start = new Date(today);
+      start.setDate(today.getDate() - mondayOffset);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return { start, end };
+    }
+
+    function getStatsRangeKey(period) {
+      return "range:" + formatStatsInputDate(period.start) + ":" + formatStatsInputDate(period.end);
+    }
+
+    function formatStatsPeriodLabel(period) {
+      const format = (date) => date.getFullYear() + "." + String(date.getMonth() + 1).padStart(2, "0") + "." + String(date.getDate()).padStart(2, "0");
+      return format(period.start) + " ~ " + format(period.end);
+    }
+
+    function getActiveStatsKey() {
+      if (state.statsMode === "month") return getStatsMonthKey(state.statsMonth || new Date());
+      return state.statsPeriod ? getStatsRangeKey(state.statsPeriod) : "";
+    }
+
+    function syncStatsControls() {
+      document.querySelectorAll("[data-stats-mode]").forEach((button) => {
+        const active = button.dataset.statsMode === state.statsMode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      $("statsMonthControls").hidden = state.statsMode !== "month";
+      if (state.statsPeriod) setText("statsPeriodLabel", formatStatsPeriodLabel(state.statsPeriod));
+    }
+
     function summarizeStatsRows(rows) {
       return (rows || []).reduce((summary, row) => {
         if (row.clockIn || row.clockOut) summary.workDays += 1;
@@ -2988,31 +3181,42 @@
         statistics: payload?.statistics || {}
       };
       if (!state.statsMonth) state.statsMonth = date;
+      if (!state.statsPeriod) state.statsPeriod = getStatsMonthPeriod(date);
       if (getStatsMonthKey(state.statsMonth) === getStatsMonthKey(date)) renderStatsMonth();
     }
 
     function renderStatsMonth() {
       const date = getStatsMonthDate(state.statsMonth || new Date());
-      const entry = state.statsCache[getStatsMonthKey(date)] || { rows: [], summary: {} };
+      const entry = state.statsCache[getActiveStatsKey()] || { rows: [], summary: {}, statistics: {} };
       const summary = normalizeStatsSummary(entry);
       const monthLabel = date.getFullYear() + "년 " + (date.getMonth() + 1) + "월";
       const workText = formatStatsDuration(summary.workMinutes);
-      const weekWorkText = formatStatsDuration(summary.weekWorkMinutes);
+      const weekWorkText = state.statsMode === "week" ? workText : formatStatsDuration(summary.weekWorkMinutes);
       const averageDailyWorkText = formatStatsDuration(summary.averageDailyWorkMinutes);
       const earlyText = formatStatsDuration(summary.earlyMinutes);
       const overtimeText = formatStatsDuration(summary.overtimeMinutes);
       const otText = formatStatsDuration(summary.otMinutes);
 
       setText("statsMonthLabel", monthLabel);
+      syncStatsControls();
       setText("statsWeeklyWork", weekWorkText);
       setText("statsTotalWork", workText);
+      setText("statsTotalWorkLabel", state.statsMode === "range" ? "선택 기간 총 근무시간" : "이번 달 총 근무시간");
       setText("statsAverageDailyWork", averageDailyWorkText);
+      setText("statsSummaryTitle", state.statsMode === "week" ? "주간 상세" : state.statsMode === "range" ? "기간 상세" : "월간 상세");
       setText("statsWorkDays", summary.workDays + "일");
       setText("sumEarly", earlyText);
       setText("sumOvertime", overtimeText);
       setText("sumOt", otText);
       setText("statsAverageClockIn", getAverageAttendanceTime(entry.rows, "clockIn"));
       setText("statsAverageClockOut", getAverageAttendanceTime(entry.rows, "clockOut"));
+
+      const currentMonth = getStatsMonthKey(new Date());
+      const showWeeklyCard = state.statsMode === "week" || (state.statsMode === "month" && getStatsMonthKey(date) === currentMonth);
+      const showTotalWorkCard = state.statsMode !== "week";
+      $("statsWeeklyCard").hidden = !showWeeklyCard;
+      $("statsTotalWorkCard").hidden = !showTotalWorkCard;
+      document.querySelector(".stats-time-grid").classList.toggle("compact-two", !(showWeeklyCard && showTotalWorkCard));
     }
 
     async function fetchStatsMonth(date) {
@@ -3041,9 +3245,12 @@
 
     async function loadStatsMonth(date) {
       const target = getStatsMonthDate(date);
+      state.statsMode = "month";
       state.statsMonth = target;
+      state.statsPeriod = getStatsMonthPeriod(target);
       setText("statsMonthLabel", target.getFullYear() + "년 " + (target.getMonth() + 1) + "월");
-      $("statsView").classList.add("loading");
+      syncStatsControls();
+      $("statsView").classList.add("updating");
       try {
         await fetchStatsMonth(target);
         if (getStatsMonthKey(state.statsMonth) !== getStatsMonthKey(target)) return;
@@ -3051,8 +3258,54 @@
       } catch (error) {
         showToast("통계 조회 실패", error.message || String(error), "error");
       } finally {
-        if (getStatsMonthKey(state.statsMonth) === getStatsMonthKey(target)) $("statsView").classList.remove("loading");
+        if (getStatsMonthKey(state.statsMonth) === getStatsMonthKey(target)) $("statsView").classList.remove("updating");
       }
+    }
+
+    async function fetchStatsRange(period) {
+      const key = getStatsRangeKey(period);
+      if (state.statsCache[key]) return state.statsCache[key];
+      if (state.statsRequests[key]) return state.statsRequests[key];
+
+      const request = callServer("getAttendanceByRange", {
+        employeeId: state.user?.employeeId || state.employee?.employee?.employeeId,
+        startDate: formatStatsInputDate(period.start),
+        endDate: formatStatsInputDate(period.end)
+      }).then((response) => {
+        state.statsCache[key] = {
+          rows: response?.rows || [],
+          summary: response?.summary || {},
+          statistics: response?.statistics || {}
+        };
+        return state.statsCache[key];
+      }).finally(() => {
+        delete state.statsRequests[key];
+      });
+      state.statsRequests[key] = request;
+      return request;
+    }
+
+    async function loadStatsRange(period, mode) {
+      state.statsMode = mode;
+      state.statsPeriod = { start: new Date(period.start), end: new Date(period.end) };
+      syncStatsControls();
+      $("statsView").classList.add("updating");
+      const key = getStatsRangeKey(state.statsPeriod);
+      try {
+        await fetchStatsRange(state.statsPeriod);
+        if (getActiveStatsKey() !== key) return;
+        renderStatsMonth();
+      } catch (error) {
+        showToast("통계 조회 실패", error.message || String(error), "error");
+      } finally {
+        if (getActiveStatsKey() === key) $("statsView").classList.remove("updating");
+      }
+    }
+
+    function loadStatsView() {
+      if (state.statsMode === "week") return loadStatsRange(getCurrentStatsWeekPeriod(), "week");
+      if (state.statsMode === "range" && state.statsRange) return loadStatsRange(state.statsRange, "range");
+      return loadStatsMonth(state.statsMonth || new Date());
     }
 
     function moveStatsMonth(offset) {
@@ -3062,6 +3315,50 @@
 
     function moveStatsToToday() {
       loadStatsMonth(new Date());
+    }
+
+    function openStatsRangeDialog() {
+      const period = state.statsRange || getStatsMonthPeriod(new Date());
+      $("statsRangeStart").value = formatStatsInputDate(period.start);
+      $("statsRangeEnd").value = formatStatsInputDate(period.end);
+      setText("statsRangeError", "");
+      $("statsRangeModal").classList.add("open");
+      $("statsRangeModal").setAttribute("aria-hidden", "false");
+      window.setTimeout(() => $("statsRangeStart").focus(), 0);
+    }
+
+    function closeStatsRangeDialog() {
+      $("statsRangeModal").classList.remove("open");
+      $("statsRangeModal").setAttribute("aria-hidden", "true");
+    }
+
+    function applyStatsRange() {
+      const start = parseStatsInputDate($("statsRangeStart").value);
+      const end = parseStatsInputDate($("statsRangeEnd").value);
+      if (!start || !end) {
+        setText("statsRangeError", "시작일과 종료일을 모두 선택해 주세요.");
+        return;
+      }
+      if (start > end) {
+        setText("statsRangeError", "시작일은 종료일보다 늦을 수 없습니다.");
+        return;
+      }
+
+      state.statsRange = { start, end };
+      closeStatsRangeDialog();
+      loadStatsRange(state.statsRange, "range");
+    }
+
+    function selectStatsMode(mode) {
+      if (mode === "range") {
+        openStatsRangeDialog();
+        return;
+      }
+      if (mode === "week") {
+        loadStatsRange(getCurrentStatsWeekPeriod(), "week");
+        return;
+      }
+      loadStatsMonth(state.statsMonth || new Date());
     }
 
     function renderHomeRecent(rows) {
@@ -3748,6 +4045,15 @@
     $("statsPrevMonth").addEventListener("click", () => moveStatsMonth(-1));
     $("statsNextMonth").addEventListener("click", () => moveStatsMonth(1));
     $("statsTodayMonth").addEventListener("click", moveStatsToToday);
+    document.querySelectorAll("[data-stats-mode]").forEach((button) => {
+      button.addEventListener("click", () => selectStatsMode(button.dataset.statsMode));
+    });
+    $("statsRangeClose").addEventListener("click", closeStatsRangeDialog);
+    $("statsRangeCancel").addEventListener("click", closeStatsRangeDialog);
+    $("statsRangeApply").addEventListener("click", applyStatsRange);
+    $("statsRangeModal").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeStatsRangeDialog();
+    });
     $("attendanceDetailClose").addEventListener("click", closeAttendanceDetail);
     $("attendanceDetailModal").addEventListener("click", (event) => {
       if (event.target === event.currentTarget) closeAttendanceDetail();
@@ -3766,6 +4072,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && $("attendanceDetailModal").classList.contains("open")) closeAttendanceDetail();
       if (event.key === "Escape" && $("adminEmployeeDetail").classList.contains("open")) closeAdminEmployeeDetail();
+      if (event.key === "Escape" && $("statsRangeModal").classList.contains("open")) closeStatsRangeDialog();
     });
     $("loginBtn").addEventListener("click", login);
     $("loginEmployeeId").addEventListener("keydown", (event) => {
