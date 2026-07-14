@@ -1,7 +1,8 @@
 "use strict";
 
-// Firebase Messaging initialization and background delivery are connected in
-// the next sprint after a Firebase project and VAPID key have been issued.
+// FCM initialization is intentionally deferred until Firebase credentials and
+// notification consent rules are approved. The main service worker imports
+// this file so future messaging support uses a single worker scope.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = new URL("/?source=notification", self.location.origin).href;
