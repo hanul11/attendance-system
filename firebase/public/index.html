@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="color-scheme" content="light">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="LOGIFLOW">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>LOGIFLOW</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon-180.png">
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f8fa;
+      color: #172033;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      background: #f7f8fa;
+    }
+
+    .launch-shell {
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    }
+
+    .launch-content {
+      width: min(100%, 360px);
+      text-align: center;
+    }
+
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 20px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: #687386;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status {
+      min-height: 22px;
+      margin: 28px 0 0;
+      color: #687386;
+      font-size: 13px;
+    }
+
+    .status.is-error { color: #c2413b; }
+
+    .loader {
+      width: 24px;
+      height: 24px;
+      margin: 18px auto 0;
+      border: 2px solid #dbe3f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    .version {
+      margin: 20px 0 0;
+      color: #9aa3b2;
+      font-size: 11px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loader { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="launch-shell">
+    <section class="launch-content" aria-live="polite">
+      <div class="brand-mark" aria-hidden="true">L</div>
+      <h1>LOGIFLOW</h1>
+      <p class="subtitle">스마트 근태관리</p>
+      <div class="loader" aria-hidden="true"></div>
+      <p class="status" id="launchStatus">앱을 준비하고 있습니다.</p>
+      <p class="version" id="appVersion">Version -</p>
+    </section>
+  </main>
+  <script src="/config/app-config.js"></script>
+  <script src="/config/firebase-config.js"></script>
+  <script src="/js/firebase-bootstrap.js"></script>
+  <script src="/js/app-bootstrap.js"></script>
+</body>
+</html>
