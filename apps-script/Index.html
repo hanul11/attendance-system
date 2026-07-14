@@ -2459,6 +2459,8 @@
       attendanceSaving: false,
       historyMonth: null,
       historyRows: [],
+      historyCache: {},
+      historyLoading: false,
       selectedAttendanceDate: null,
       statsMode: "month",
       statsMonth: null,
@@ -3144,6 +3146,15 @@
         const today = new Date();
         state.historyMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       }
+      const viewDate = state.historyMonth;
+      const key = getStatsMonthKey(viewDate);
+      const monthRows = state.historyRows.filter((row) => {
+        const date = parseAttendanceDate(row.date);
+        return date && date.getFullYear() === viewDate.getFullYear() && date.getMonth() === viewDate.getMonth();
+      });
+      if (monthRows.length || !Object.prototype.hasOwnProperty.call(state.historyCache, key)) {
+        state.historyCache[key] = monthRows;
+      }
       renderHistoryMonth();
       renderAttendanceRecent(state.historyRows);
     }
@@ -3598,20 +3609,54 @@
       `).join("") || '<div class="attendance-empty">해당 월의 근태 기록이 없습니다.</div>';
     }
 
+    async function loadHistoryMonth(date) {
+      if (!state.user || state.historyLoading) return;
+      const target = getStatsMonthDate(date);
+      const key = getStatsMonthKey(target);
+      const previousMonth = state.historyMonth;
+
+      if (Object.prototype.hasOwnProperty.call(state.historyCache, key)) {
+        state.historyMonth = target;
+        state.historyRows = state.historyCache[key];
+        state.selectedAttendanceDate = null;
+        closeAttendanceDetail();
+        renderHistoryMonth();
+        renderAttendanceRecent(state.historyRows);
+        return;
+      }
+
+      state.historyLoading = true;
+      showLoadingOverlay("근태 기록을 불러오는 중입니다.", target.getFullYear() + "년 " + (target.getMonth() + 1) + "월 데이터를 조회하고 있습니다.");
+      try {
+        const response = await callServer("getMonthlyAttendance", {
+          employeeId: state.user.employeeId,
+          year: target.getFullYear(),
+          month: target.getMonth() + 1
+        });
+        state.historyCache[key] = response?.rows || [];
+        state.historyMonth = target;
+        state.historyRows = state.historyCache[key];
+        state.selectedAttendanceDate = null;
+        closeAttendanceDetail();
+        renderHistoryMonth();
+        renderAttendanceRecent(state.historyRows);
+      } catch (error) {
+        state.historyMonth = previousMonth;
+        showToast("근태 조회 실패", getFriendlyError(error), "error");
+      } finally {
+        state.historyLoading = false;
+        hideLoadingOverlay();
+      }
+    }
+
     function moveHistoryMonth(offset) {
       const current = state.historyMonth || new Date();
-      state.historyMonth = new Date(current.getFullYear(), current.getMonth() + offset, 1);
-      state.selectedAttendanceDate = null;
-      closeAttendanceDetail();
-      renderHistoryMonth();
+      return loadHistoryMonth(new Date(current.getFullYear(), current.getMonth() + offset, 1));
     }
 
     function moveHistoryToToday() {
       const today = new Date();
-      state.historyMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      state.selectedAttendanceDate = null;
-      closeAttendanceDetail();
-      renderHistoryMonth();
+      return loadHistoryMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     }
 
     function openAttendanceAllView() {
@@ -4029,6 +4074,7 @@
         const payload = await callServer("getEmployeeDashboard", state.user.employeeId);
         state.statsCache = {};
         state.statsRequests = {};
+        state.historyCache = {};
         applyEmployeePayload(payload);
         updateCachedEmployee(payload);
 
