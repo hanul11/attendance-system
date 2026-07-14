@@ -1232,7 +1232,9 @@
     .stats-section-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .stats-section-head h2 { margin: 0; font-size: 17px; font-weight: 650; }
     .stats-section-head span { color: var(--faint); font-size: 11px; font-weight: 400; }
+    .stats-time-grid,
     .stats-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .stats-time-grid .stats-summary-card:first-child { grid-column: 1 / -1; }
     .stats-summary-card {
       min-height: 118px;
       padding: 20px;
@@ -1269,6 +1271,7 @@
       .stats-header h1 { font-size: 27px; }
       .stats-today-row { margin-bottom: 22px; }
       .stats-section { margin-top: 22px; }
+      .stats-time-grid,
       .stats-summary-grid { gap: 10px; }
       .stats-summary-card { min-height: 104px; padding: 17px; }
       .stats-summary-value { margin-top: 13px; font-size: 22px; }
@@ -2036,13 +2039,22 @@
           </div>
           <div class="stats-today-row"><button class="stats-today-btn" id="statsTodayMonth" type="button">오늘</button></div>
 
+          <section class="stats-section" aria-labelledby="statsWorkTimeTitle">
+            <div class="stats-section-head"><h2 id="statsWorkTimeTitle">근무시간</h2><span>월요일~일요일 기준</span></div>
+            <div class="stats-time-grid">
+              <article class="stats-summary-card"><div class="stats-summary-head"><span>이번 주 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">date_range</span></div><div class="stats-summary-value" id="statsWeeklyWork">0시간</div></article>
+              <article class="stats-summary-card"><div class="stats-summary-head"><span>이번 달 총 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">schedule</span></div><div class="stats-summary-value" id="statsTotalWork">0시간</div></article>
+              <article class="stats-summary-card"><div class="stats-summary-head"><span>평균 일일 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">avg_time</span></div><div class="stats-summary-value" id="statsAverageDailyWork">0시간</div></article>
+            </div>
+          </section>
+
           <section class="stats-section" aria-labelledby="statsSummaryTitle">
-            <div class="stats-section-head"><h2 id="statsSummaryTitle">이번 달 요약</h2><span>월 누적</span></div>
+            <div class="stats-section-head"><h2 id="statsSummaryTitle">월간 상세</h2><span>선택한 월 누적</span></div>
             <div class="stats-summary-grid">
-              <article class="stats-summary-card"><div class="stats-summary-head"><span>총 근무시간</span><span class="material-symbols-rounded" aria-hidden="true">schedule</span></div><div class="stats-summary-value" id="statsTotalWork">0시간</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>총 출근일수</span><span class="material-symbols-rounded" aria-hidden="true">calendar_month</span></div><div class="stats-summary-value" id="statsWorkDays">0일</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>총 조출시간</span><span class="material-symbols-rounded" aria-hidden="true">wb_twilight</span></div><div class="stats-summary-value" id="sumEarly">0시간</div></article>
               <article class="stats-summary-card"><div class="stats-summary-head"><span>총 잔업시간</span><span class="material-symbols-rounded" aria-hidden="true">more_time</span></div><div class="stats-summary-value" id="sumOvertime">0시간</div></article>
+              <article class="stats-summary-card"><div class="stats-summary-head"><span>총 OT</span><span class="material-symbols-rounded" aria-hidden="true">timer</span></div><div class="stats-summary-value" id="sumOt">0시간</div></article>
             </div>
           </section>
 
@@ -2905,21 +2917,49 @@
     function summarizeStatsRows(rows) {
       return (rows || []).reduce((summary, row) => {
         if (row.clockIn || row.clockOut) summary.workDays += 1;
-        summary.workMinutes += durationTextToMinutes(row.workTime);
+        const workMinutes = durationTextToMinutes(row.workTime);
+        summary.workMinutes += workMinutes;
+        if (workMinutes > 0) summary.completedWorkDays += 1;
         summary.earlyMinutes += durationTextToMinutes(row.early);
         summary.overtimeMinutes += durationTextToMinutes(row.overtime);
+        summary.otMinutes += durationTextToMinutes(row.ot);
         return summary;
-      }, { workDays: 0, workMinutes: 0, earlyMinutes: 0, overtimeMinutes: 0 });
+      }, { workDays: 0, completedWorkDays: 0, workMinutes: 0, earlyMinutes: 0, overtimeMinutes: 0, otMinutes: 0 });
+    }
+
+    function getCurrentWeekWorkMinutes(rows) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const mondayOffset = today.getDay() === 0 ? 6 : today.getDay() - 1;
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - mondayOffset);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+
+      return (rows || []).reduce((total, row) => {
+        const date = parseAttendanceDate(row.date);
+        return date && date >= weekStart && date < weekEnd
+          ? total + durationTextToMinutes(row.workTime)
+          : total;
+      }, 0);
     }
 
     function normalizeStatsSummary(entry) {
       const rowsSummary = summarizeStatsRows(entry?.rows || []);
       const summary = entry?.summary || {};
+      const statistics = entry?.statistics || {};
       return {
         workDays: Number(summary.workDays ?? rowsSummary.workDays) || 0,
         workMinutes: summary.workTime ? durationTextToMinutes(summary.workTime) : rowsSummary.workMinutes,
         earlyMinutes: summary.early ? durationTextToMinutes(summary.early) : rowsSummary.earlyMinutes,
-        overtimeMinutes: summary.overtime ? durationTextToMinutes(summary.overtime) : rowsSummary.overtimeMinutes
+        overtimeMinutes: summary.overtime ? durationTextToMinutes(summary.overtime) : rowsSummary.overtimeMinutes,
+        otMinutes: summary.ot ? durationTextToMinutes(summary.ot) : rowsSummary.otMinutes,
+        weekWorkMinutes: statistics.weekWorkTime
+          ? durationTextToMinutes(statistics.weekWorkTime)
+          : getCurrentWeekWorkMinutes(entry?.rows || []),
+        averageDailyWorkMinutes: statistics.averageDailyWorkTime
+          ? durationTextToMinutes(statistics.averageDailyWorkTime)
+          : (rowsSummary.completedWorkDays ? Math.round(rowsSummary.workMinutes / rowsSummary.completedWorkDays) : 0)
       };
     }
 
@@ -2944,7 +2984,8 @@
       const date = getStatsMonthDate(parsed || new Date());
       state.statsCache[getStatsMonthKey(date)] = {
         rows: payload?.rows || [],
-        summary: payload?.summary || {}
+        summary: payload?.summary || {},
+        statistics: payload?.statistics || {}
       };
       if (!state.statsMonth) state.statsMonth = date;
       if (getStatsMonthKey(state.statsMonth) === getStatsMonthKey(date)) renderStatsMonth();
@@ -2956,14 +2997,20 @@
       const summary = normalizeStatsSummary(entry);
       const monthLabel = date.getFullYear() + "년 " + (date.getMonth() + 1) + "월";
       const workText = formatStatsDuration(summary.workMinutes);
+      const weekWorkText = formatStatsDuration(summary.weekWorkMinutes);
+      const averageDailyWorkText = formatStatsDuration(summary.averageDailyWorkMinutes);
       const earlyText = formatStatsDuration(summary.earlyMinutes);
       const overtimeText = formatStatsDuration(summary.overtimeMinutes);
+      const otText = formatStatsDuration(summary.otMinutes);
 
       setText("statsMonthLabel", monthLabel);
+      setText("statsWeeklyWork", weekWorkText);
       setText("statsTotalWork", workText);
+      setText("statsAverageDailyWork", averageDailyWorkText);
       setText("statsWorkDays", summary.workDays + "일");
       setText("sumEarly", earlyText);
       setText("sumOvertime", overtimeText);
+      setText("sumOt", otText);
       setText("statsAverageClockIn", getAverageAttendanceTime(entry.rows, "clockIn"));
       setText("statsAverageClockOut", getAverageAttendanceTime(entry.rows, "clockOut"));
     }
@@ -2979,7 +3026,11 @@
         year: target.getFullYear(),
         month: target.getMonth() + 1
       }).then((response) => {
-        state.statsCache[key] = { rows: response?.rows || [], summary: response?.summary || {} };
+        state.statsCache[key] = {
+          rows: response?.rows || [],
+          summary: response?.summary || {},
+          statistics: response?.statistics || {}
+        };
         return state.statsCache[key];
       }).finally(() => {
         delete state.statsRequests[key];

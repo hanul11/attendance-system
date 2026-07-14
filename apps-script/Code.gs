@@ -386,7 +386,8 @@ function buildEmployeeDashboard(ss, employee) {
   const year = Number(Utilities.formatDate(now, CONFIG.timezone, 'yyyy'));
   const month = Number(Utilities.formatDate(now, CONFIG.timezone, 'M'));
   const todayText = formatDate(now);
-  const rows = readMonthlyAttendanceRows(sheet, block, year, month);
+  const attendanceRows = readAttendanceRows(sheet, block);
+  const rows = filterAttendanceRowsByMonth(attendanceRows, year, month);
   const today = rows.filter(function (row) {
     return row.date === todayText;
   })[0] || emptyAttendanceRow(todayText);
@@ -397,6 +398,7 @@ function buildEmployeeDashboard(ss, employee) {
     today,
     rows,
     summary,
+    statistics: buildAttendanceStatistics(attendanceRows, rows, now),
     gps: {
       site: '한울생약 제2공장',
       distanceM: 42,
@@ -426,7 +428,8 @@ function getMonthlyAttendance(request) {
 
   const sheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
   const block = findEmployeeBlock(sheet, employee.name);
-  const rows = readMonthlyAttendanceRows(sheet, block, year, month);
+  const attendanceRows = readAttendanceRows(sheet, block);
+  const rows = filterAttendanceRowsByMonth(attendanceRows, year, month);
 
   return {
     ok: true,
@@ -434,7 +437,8 @@ function getMonthlyAttendance(request) {
     year,
     month,
     rows,
-    summary: summarizeAttendanceRows(rows)
+    summary: summarizeAttendanceRows(rows),
+    statistics: buildAttendanceStatistics(attendanceRows, rows, new Date())
   };
 }
 
@@ -615,7 +619,54 @@ function getEmployeeBlocksByNameFromValues(names, headers) {
 function findDateRowValues(values, dateText) {
   for (let rowIndex = 2; rowIndex <= values.length; rowIndex += 1) {
     const row = values[rowIndex - 1];
-  …316 tokens truncated…im();
+    if (String(row[0] || '').trim() === dateText) {
+      return row;
+    }
+  }
+
+  return null;
+}
+
+function updateEmployeeStatus(request) {
+  const input = request || {};
+  const employeeId = String(input.employeeId || '').trim();
+  const status = String(input.status || '').trim();
+
+  if (!employeeId) {
+    throw new Error('사번을 확인해 주세요.');
+  }
+
+  if (status !== LABELS.employed && status !== '퇴사') {
+    throw new Error('재직상태는 재직 또는 퇴사만 사용할 수 있습니다.');
+  }
+
+  const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
+  const sheet = getRosterSheet(ss);
+  const indexes = getRosterIndexes(sheet);
+  const employees = readRosterEmployees(ss);
+  const employee = employees.filter(function (item) {
+    return item.employeeId === employeeId;
+  })[0];
+
+  if (!employee) {
+    throw new Error('등록된 사번을 찾을 수 없습니다.');
+  }
+
+  sheet.getRange(employee.row, indexes.status + 1).setValue(status);
+  SpreadsheetApp.flush();
+
+  return {
+    ok: true,
+    employeeId,
+    name: employee.name,
+    status
+  };
+}
+
+function normalizeAttendanceRequest(request) {
+  const input = request || {};
+  const type = String(input.type || '').trim();
+  const employeeId = String(input.employeeId || '').trim();
   const password = String(input.password || '').trim();
   const actualAt = input.actualAt ? new Date(input.actualAt) : new Date();
   const gpsDistanceM = Number(input.gpsDistanceM);
@@ -1001,7 +1052,7 @@ function findOrCreateDateRow(sheet, dateValue) {
   return newRow;
 }
 
-function readMonthlyAttendanceRows(sheet, block, year, month) {
+function readAttendanceRows(sheet, block) {
   const lastRow = Math.max(sheet.getLastRow(), 2);
   const requiredColumns = block.startColumn + 5;
   const values = sheet.getRange(1, 1, lastRow, requiredColumns).getDisplayValues();
@@ -1012,7 +1063,7 @@ function readMonthlyAttendanceRows(sheet, block, year, month) {
     const dateText = String(row[0] || '').trim();
     const parsed = parseSheetDateText(dateText);
 
-    if (!parsed || parsed.year !== year || parsed.month !== month) {
+    if (!parsed) {
       continue;
     }
 
@@ -1020,7 +1071,18 @@ function readMonthlyAttendanceRows(sheet, block, year, month) {
   }
 
   return rows.sort(function (left, right) {
-    return Number(left.day || 0) - Number(right.day || 0);
+    return attendanceDateToTimestamp(left.date) - attendanceDateToTimestamp(right.date);
+  });
+}
+
+function readMonthlyAttendanceRows(sheet, block, year, month) {
+  return filterAttendanceRowsByMonth(readAttendanceRows(sheet, block), year, month);
+}
+
+function filterAttendanceRowsByMonth(rows, year, month) {
+  return rows.filter(function (row) {
+    const parsed = parseSheetDateText(row.date);
+    return parsed && parsed.year === year && parsed.month === month;
   });
 }
 
@@ -1090,6 +1152,47 @@ function summarizeAttendanceRows(rows) {
     leaveUsed: String(Math.round(totals.leaveUsed * 10) / 10),
     leaveRemain: String(Math.max(0, Math.round((15 - totals.leaveUsed) * 10) / 10))
   };
+}
+
+function buildAttendanceStatistics(attendanceRows, monthRows, now) {
+  const monthly = summarizeAttendanceRows(monthRows);
+  const monthWorkMinutes = durationTextToMinutes(monthly.workTime);
+  const completedWorkDays = monthRows.filter(function (row) {
+    return durationTextToMinutes(row.workTime) > 0;
+  }).length;
+  const weekRange = getCurrentWeekRange(now);
+  const weekWorkMinutes = attendanceRows.reduce(function (total, row) {
+    const timestamp = attendanceDateToTimestamp(row.date);
+    if (timestamp < weekRange.start || timestamp > weekRange.end) {
+      return total;
+    }
+    return total + durationTextToMinutes(row.workTime);
+  }, 0);
+
+  return {
+    weekWorkTime: formatDurationMinutes(weekWorkMinutes),
+    monthWorkTime: monthly.workTime,
+    averageDailyWorkTime: formatDurationMinutes(
+      completedWorkDays ? Math.round(monthWorkMinutes / completedWorkDays) : 0
+    )
+  };
+}
+
+function getCurrentWeekRange(value) {
+  const current = stripTime(value instanceof Date ? value : new Date());
+  const mondayOffset = current.getDay() === 0 ? 6 : current.getDay() - 1;
+  const start = new Date(current);
+  start.setDate(current.getDate() - mondayOffset);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start: start.getTime(), end: end.getTime() };
+}
+
+function attendanceDateToTimestamp(value) {
+  const parsed = parseSheetDateText(value);
+  return parsed ? new Date(parsed.year, parsed.month - 1, parsed.day).getTime() : 0;
 }
 
 function getLastLogsByEmployeeId(ss) {
@@ -1303,4 +1406,3 @@ function columnToLetter(column) {
 
   return value;
 }
-
