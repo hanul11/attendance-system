@@ -43,6 +43,10 @@ const CONFIG = Object.freeze({
   passwordResetSheetName: SHEET_NAMES.passwordReset,
   adminEmployeeId: '2023068',
   timezone: 'Asia/Seoul',
+  attendancePolicy: {
+    workStartMinutes: 9 * 60,
+    clockInOpenBeforeMinutes: 30
+  },
   gps: {
     allowedRadiusM: 200
   }
@@ -240,6 +244,10 @@ function registerAttendance(request) {
 
     if (input.gpsDistanceM > CONFIG.gps.allowedRadiusM) {
       throw createOperationalError('회사 반경 내에서만 출퇴근 등록이 가능합니다.', LOG_EVENTS.gpsFailed);
+    }
+
+    if (input.type === 'clockIn') {
+      assertClockInRegistrationWindow(input.actualAt);
     }
 
     const attendanceSheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
@@ -607,54 +615,7 @@ function getEmployeeBlocksByNameFromValues(names, headers) {
 function findDateRowValues(values, dateText) {
   for (let rowIndex = 2; rowIndex <= values.length; rowIndex += 1) {
     const row = values[rowIndex - 1];
-    if (String(row[0] || '').trim() === dateText) {
-      return row;
-    }
-  }
-
-  return null;
-}
-
-function updateEmployeeStatus(request) {
-  const input = request || {};
-  const employeeId = String(input.employeeId || '').trim();
-  const status = String(input.status || '').trim();
-
-  if (!employeeId) {
-    throw new Error('사번을 확인해 주세요.');
-  }
-
-  if (status !== LABELS.employed && status !== '퇴사') {
-    throw new Error('재직상태는 재직 또는 퇴사만 사용할 수 있습니다.');
-  }
-
-  const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-  const sheet = getRosterSheet(ss);
-  const indexes = getRosterIndexes(sheet);
-  const employees = readRosterEmployees(ss);
-  const employee = employees.filter(function (item) {
-    return item.employeeId === employeeId;
-  })[0];
-
-  if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
-  }
-
-  sheet.getRange(employee.row, indexes.status + 1).setValue(status);
-  SpreadsheetApp.flush();
-
-  return {
-    ok: true,
-    employeeId,
-    name: employee.name,
-    status
-  };
-}
-
-function normalizeAttendanceRequest(request) {
-  const input = request || {};
-  const type = String(input.type || '').trim();
-  const employeeId = String(input.employeeId || '').trim();
+  …316 tokens truncated…im();
   const password = String(input.password || '').trim();
   const actualAt = input.actualAt ? new Date(input.actualAt) : new Date();
   const gpsDistanceM = Number(input.gpsDistanceM);
@@ -683,6 +644,22 @@ function normalizeAttendanceRequest(request) {
     gpsDistanceM,
     device: String(input.device || '').trim()
   };
+}
+
+function assertClockInRegistrationWindow(actualAt) {
+  const currentMinutes = getMinutesInTimezone(actualAt);
+  const openMinutes = CONFIG.attendancePolicy.workStartMinutes
+    - CONFIG.attendancePolicy.clockInOpenBeforeMinutes;
+
+  if (currentMinutes < openMinutes) {
+    throw createOperationalError('출근 등록 가능 시간이 아닙니다.', '', true);
+  }
+}
+
+function getMinutesInTimezone(dateValue) {
+  const hour = Number(Utilities.formatDate(dateValue, CONFIG.timezone, 'H'));
+  const minute = Number(Utilities.formatDate(dateValue, CONFIG.timezone, 'm'));
+  return hour * 60 + minute;
 }
 
 function readRosterEmployees(ss) {
@@ -1326,3 +1303,4 @@ function columnToLetter(column) {
 
   return value;
 }
+
