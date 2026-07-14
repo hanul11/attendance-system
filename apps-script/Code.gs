@@ -1334,7 +1334,7 @@ function durationTextToMinutes(value) {
     return 0;
   }
 
-  const match = text.match(/^(\d{1,2}):(\d{2})$/);
+  const match = text.match(/^(\d+):(\d{2})$/);
 
   if (match) {
     return Number(match[1]) * 60 + Number(match[2]);

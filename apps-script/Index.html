@@ -2578,7 +2578,7 @@
     }
 
     function durationTextToMinutes(value) {
-      const match = String(value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+      const match = String(value || "").trim().match(/^(\d+):(\d{2})$/);
       return match ? Number(match[1]) * 60 + Number(match[2]) : 0;
     }
 
@@ -3003,6 +3003,7 @@
       setText("statsMonthLabel", state.statsMode === "week"
         ? formatStatsPeriodLabel(state.statsPeriod || getStatsWeekPeriod(new Date()))
         : month.getFullYear() + "년 " + (month.getMonth() + 1) + "월");
+      setText("statsTodayMonth", state.statsMode === "week" ? "이번 주" : "이번 달");
     }
 
     function summarizeStatsRows(rows) {
@@ -3097,7 +3098,7 @@
 
       setText("statsMonthLabel", monthLabel);
       syncStatsControls();
-      setText("statsWeeklyWorkLabel", state.statsMode === "week" ? "총 근무시간" : "이번 주 근무시간");
+      setText("statsWeeklyWorkLabel", "이번 주 근무시간");
       setText("statsWeeklyWork", weekWorkText);
       setText("statsTotalWork", workText);
       setText("statsTotalWorkLabel", "이번 달 총 근무시간");
@@ -3110,9 +3111,8 @@
       setText("statsAverageClockIn", getAverageAttendanceTime(entry.rows, "clockIn"));
       setText("statsAverageClockOut", getAverageAttendanceTime(entry.rows, "clockOut"));
 
-      const currentMonth = getStatsMonthKey(new Date());
-      const showWeeklyCard = state.statsMode === "week" || getStatsMonthKey(date) === currentMonth;
-      const showTotalWorkCard = state.statsMode !== "week";
+      const showWeeklyCard = state.statsMode === "week";
+      const showTotalWorkCard = state.statsMode === "month";
       $("statsWeeklyCard").hidden = !showWeeklyCard;
       $("statsTotalWorkCard").hidden = !showTotalWorkCard;
       document.querySelector(".stats-time-grid").classList.toggle("compact-two", !(showWeeklyCard && showTotalWorkCard));
