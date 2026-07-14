@@ -1,0 +1,23 @@
+{
+  "appId": "kr.co.hanul.logiflow",
+  "appName": "LOGIFLOW",
+  "webDir": "../firebase/public",
+  "server": {
+    "url": "https://script.google.com/macros/s/AKfycbyd8ITba0px2wJHlzmxhkCF2Y0RpUQn9s93EJltDBKEabtL-4YJhVWqWWhL-MzvJtwY/exec",
+    "cleartext": false,
+    "allowNavigation": [
+      "script.google.com",
+      "*.googleusercontent.com",
+      "accounts.google.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#F7F8FA"
+  },
+  "ios": {
+    "backgroundColor": "#F7F8FA",
+    "contentInset": "automatic",
+    "scrollEnabled": true
+  }
+}
