@@ -1,0 +1,7 @@
+android {
+    defaultConfig {
+        applicationId "kr.co.hanul.logiflow"
+        versionCode 1
+        versionName "1.0.0"
+    }
+}

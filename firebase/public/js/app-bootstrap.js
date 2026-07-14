@@ -2,6 +2,8 @@
   "use strict";
 
   const config = window.LOGIFLOW_APP_CONFIG || {};
+  const launchShell = document.getElementById("launchShell");
+  const appFrame = document.getElementById("logiflowAppFrame");
   const statusElement = document.getElementById("launchStatus");
   const versionElement = document.getElementById("appVersion");
 
@@ -23,35 +25,43 @@
 
   function buildTargetUrl(baseUrl) {
     const target = new URL(baseUrl);
-    target.searchParams.set("source", "pwa");
+    target.searchParams.set("source", "firebase-hosting");
     target.searchParams.set("appVersion", config.version || "unknown");
     return target.href;
   }
 
-  function launchAttendanceApp() {
-    if (!config.apiUrl) {
+  function showEmbeddedApp(serviceWorkerRegistration) {
+    if (!appFrame || !config.apiUrl) {
       setStatus("앱 연결 주소가 설정되지 않았습니다.", true);
       return;
     }
 
-    if (config.launchMode !== "redirect") {
+    if (config.launchMode !== "embed") {
       setStatus("지원하지 않는 실행 방식입니다.", true);
       return;
     }
 
-    setStatus("LOGIFLOW를 시작하고 있습니다.", false);
-    window.location.replace(buildTargetUrl(config.apiUrl));
+    appFrame.addEventListener("load", function () {
+      appFrame.hidden = false;
+      if (launchShell) launchShell.hidden = true;
+      if (window.LOGIFLOW_NOTIFICATION_SERVICE) {
+        window.LOGIFLOW_NOTIFICATION_SERVICE.attach(appFrame, serviceWorkerRegistration);
+      }
+    }, { once: true });
+
+    appFrame.src = buildTargetUrl(config.apiUrl);
   }
 
-  function start() {
+  async function start() {
     if (versionElement) {
       versionElement.textContent = "Version " + (config.version || "-") + " · Build " + (config.buildNumber || "-");
     }
 
-    Promise.all([
-      registerServiceWorker(),
-      window.LOGIFLOW_FIREBASE ? window.LOGIFLOW_FIREBASE.initialize() : Promise.resolve(null)
-    ]).then(launchAttendanceApp, launchAttendanceApp);
+    const serviceWorkerRegistration = await registerServiceWorker();
+    if (window.LOGIFLOW_FIREBASE) {
+      await window.LOGIFLOW_FIREBASE.initialize().catch(function () { return null; });
+    }
+    showEmbeddedApp(serviceWorkerRegistration);
   }
 
   if (document.readyState === "loading") {

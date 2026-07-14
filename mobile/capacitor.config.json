@@ -1,0 +1,45 @@
+{
+  "appId": "kr.co.hanul.logiflow",
+  "appName": "LOGIFLOW",
+  "webDir": "../firebase/public",
+  "server": {
+    "url": "https://YOUR_FIREBASE_PROJECT_ID.web.app",
+    "cleartext": false,
+    "allowNavigation": [
+      "YOUR_FIREBASE_PROJECT_ID.web.app",
+      "script.google.com",
+      "*.googleusercontent.com",
+      "accounts.google.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#F7F8FA"
+  },
+  "ios": {
+    "backgroundColor": "#F7F8FA",
+    "contentInset": "automatic",
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "FirebaseMessaging": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 1200,
+      "backgroundColor": "#F7F8FA"
+    }
+  },
+  "experimental": {
+    "ios": {
+      "spm": {
+        "packageOptions": {
+          "@capacitor-firebase/messaging": {
+            "symlink": true
+          }
+        }
+      }
+    }
+  }
+}

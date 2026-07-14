@@ -39,5 +39,9 @@
   },
   "firestore": {
     "rules": "firebase/firestore.rules"
+  },
+  "functions": {
+    "source": "firebase/functions",
+    "runtime": "nodejs22"
   }
 }

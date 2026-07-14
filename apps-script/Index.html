@@ -2224,7 +2224,8 @@
           <section class="app-settings-section" aria-labelledby="appSettingsGeneralTitle">
             <h2 id="appSettingsGeneralTitle">앱 설정</h2>
             <div class="profile-list">
-              <div class="profile-list-row"><span class="profile-list-icon"><span class="material-symbols-rounded" aria-hidden="true">notifications</span></span><span class="profile-list-copy"><strong>출퇴근 알림</strong><span>Sprint 8에서 실제 알림 기능을 연결합니다.</span></span><label class="profile-switch" aria-label="출퇴근 알림"><input id="appNotificationToggle" type="checkbox" checked><span></span></label></div>
+              <div class="profile-list-row"><span class="profile-list-icon"><span class="material-symbols-rounded" aria-hidden="true">notifications_active</span></span><span class="profile-list-copy"><strong>출근 알림</strong><span>출근 등록 및 미등록 안내를 받습니다.</span></span><label class="profile-switch" aria-label="출근 알림"><input id="appCheckinNotificationToggle" type="checkbox" checked><span></span></label></div>
+              <div class="profile-list-row"><span class="profile-list-icon"><span class="material-symbols-rounded" aria-hidden="true">notifications</span></span><span class="profile-list-copy"><strong>퇴근 알림</strong><span>퇴근 등록 및 미등록 안내를 받습니다.</span></span><label class="profile-switch" aria-label="퇴근 알림"><input id="appCheckoutNotificationToggle" type="checkbox" checked><span></span></label></div>
               <div class="profile-list-row"><span class="profile-list-icon"><span class="material-symbols-rounded" aria-hidden="true">login</span></span><span class="profile-list-copy"><strong>자동 로그인</strong><span>OFF 설정 시 다음 실행부터 로그인 화면이 표시됩니다.</span></span><label class="profile-switch" aria-label="자동 로그인"><input id="appAutoLoginToggle" type="checkbox" checked><span></span></label></div>
               <div class="profile-list-row"><span class="profile-list-icon"><span class="material-symbols-rounded" aria-hidden="true">lock</span></span><span class="profile-list-copy"><strong>앱 잠금</strong><span>추후 생체인증 기능에 사용됩니다.</span></span><label class="profile-switch" aria-label="앱 잠금"><input id="appLockToggle" type="checkbox"><span></span></label></div>
             </div>
@@ -2250,7 +2251,7 @@
             <div class="profile-card profile-app-grid">
               <div class="profile-app-item"><span>앱 이름</span><strong id="appInfoName">LOGIFLOW</strong></div>
               <div class="profile-app-item"><span>버전</span><strong id="appInfoVersion">Version 1.0.0</strong></div>
-              <div class="profile-app-item"><span>Build Number</span><strong id="appInfoBuild">20260714.10</strong></div>
+              <div class="profile-app-item"><span>Build Number</span><strong id="appInfoBuild">1</strong></div>
               <div class="profile-app-item"><span>마지막 업데이트</span><strong id="appInfoUpdated">2026.07.14</strong></div>
               <div class="profile-app-item"><span>개발</span><strong id="appInfoDeveloper">한울생약 품질보람팀</strong></div>
             </div>
@@ -2468,19 +2469,25 @@
       statsPeriod: null,
       statsCache: {},
       statsRequests: {},
+      notificationHostOrigin: "",
       clockTimer: null,
       refreshTimer: null
     };
     const APP_META = Object.freeze({
       name: "LOGIFLOW",
       version: "1.0.0",
-      buildNumber: "20260714.10",
+      buildNumber: "1",
       lastUpdated: "2026.07.14",
       developer: "한울생약 품질보람팀"
     });
     const APP_VERSION = APP_META.version;
     const SESSION_KEY = "logiflow.session.v1";
     const APP_SETTINGS_KEY = "logiflow.settings.v1";
+    const NOTIFICATION_MESSAGE_VERSION = 1;
+    const TRUSTED_NOTIFICATION_HOST_ORIGINS = Object.freeze([
+      "https://YOUR_FIREBASE_PROJECT_ID.web.app",
+      "https://YOUR_FIREBASE_PROJECT_ID.firebaseapp.com"
+    ]);
     const VERIFIED_GPS_DISTANCE_M = 42;
     const DEFAULT_DEVICE_NAME = "LogiFlow PWA";
 
@@ -2557,10 +2564,15 @@
     }
 
     function readAppSettings() {
-      const defaults = { notifications: true, appLock: false };
+      const defaults = { checkinNotifications: true, checkoutNotifications: true, appLock: false };
       try {
         const saved = JSON.parse(localStorage.getItem(APP_SETTINGS_KEY) || "null");
-        return Object.assign({}, defaults, saved || {});
+        const normalized = Object.assign({}, defaults, saved || {});
+        if (saved && typeof saved.notifications === "boolean") {
+          if (typeof saved.checkinNotifications !== "boolean") normalized.checkinNotifications = saved.notifications;
+          if (typeof saved.checkoutNotifications !== "boolean") normalized.checkoutNotifications = saved.notifications;
+        }
+        return normalized;
       } catch (error) {
         return defaults;
       }
@@ -2587,7 +2599,8 @@
     function syncAppSettings() {
       const settings = readAppSettings();
       const savedSession = readSession();
-      $("appNotificationToggle").checked = settings.notifications !== false;
+      $("appCheckinNotificationToggle").checked = settings.checkinNotifications !== false;
+      $("appCheckoutNotificationToggle").checked = settings.checkoutNotifications !== false;
       $("appLockToggle").checked = settings.appLock === true;
       $("appAutoLoginToggle").checked = savedSession?.user?.employeeId === state.user?.employeeId;
       setText("appInfoName", APP_META.name);
@@ -2597,9 +2610,89 @@
       setText("appInfoDeveloper", APP_META.developer);
     }
 
-    function updateNotificationSetting(enabled) {
-      writeAppSettings({ notifications: enabled });
-      showToast("알림 설정 저장", enabled ? "출퇴근 알림을 사용하도록 저장했습니다." : "출퇴근 알림을 사용하지 않도록 저장했습니다.");
+    function getNotificationPreferences() {
+      const settings = readAppSettings();
+      return {
+        checkin: settings.checkinNotifications !== false,
+        checkout: settings.checkoutNotifications !== false
+      };
+    }
+
+    function isTrustedNotificationHostOrigin(origin) {
+      return TRUSTED_NOTIFICATION_HOST_ORIGINS.includes(origin) && !origin.includes("YOUR_FIREBASE_PROJECT_ID");
+    }
+
+    function requestNotificationRegistration() {
+      if (!state.user || !state.notificationHostOrigin || window.parent === window) return;
+      window.parent.postMessage({
+        source: "logiflow-app",
+        version: NOTIFICATION_MESSAGE_VERSION,
+        type: "LOGIFLOW_NOTIFICATION_REGISTER",
+        payload: {
+          employeeId: state.user.employeeId,
+          preferences: getNotificationPreferences()
+        }
+      }, state.notificationHostOrigin);
+    }
+
+    async function persistNotificationPreferences() {
+      if (!state.user) return;
+      const response = await callServer("updateNotificationPreferences", {
+        employeeId: state.user.employeeId,
+        preferences: getNotificationPreferences()
+      });
+      return response;
+    }
+
+    function updateNotificationSetting(type, enabled) {
+      const key = type === "checkin" ? "checkinNotifications" : "checkoutNotifications";
+      writeAppSettings({ [key]: enabled });
+      persistNotificationPreferences().catch(function () { return null; });
+      requestNotificationRegistration();
+      showToast("알림 설정 저장", (type === "checkin" ? "출근" : "퇴근") + " 알림 설정을 저장했습니다.");
+    }
+
+    async function handleNotificationHostMessage(event) {
+      if (event.source !== window.parent || !isTrustedNotificationHostOrigin(event.origin)) return;
+      const message = event.data || {};
+      if (message.source !== "logiflow-host" || message.version !== NOTIFICATION_MESSAGE_VERSION) return;
+
+      if (message.type === "LOGIFLOW_NOTIFICATION_READY") {
+        state.notificationHostOrigin = event.origin;
+        if (message.payload?.configured) requestNotificationRegistration();
+        return;
+      }
+
+      if (message.type === "LOGIFLOW_NOTIFICATION_TOKEN" && state.user) {
+        const payload = message.payload || {};
+        await callServer("registerNotificationDevice", {
+          employeeId: state.user.employeeId,
+          token: payload.token,
+          preferences: getNotificationPreferences(),
+          platform: payload.platform,
+          appVersion: payload.appVersion
+        });
+        showToast("알림 설정 완료", "이 기기에서 출퇴근 알림을 받을 수 있습니다.");
+        return;
+      }
+
+      if (message.type === "LOGIFLOW_NOTIFICATION_PREFERENCES") {
+        await persistNotificationPreferences();
+        return;
+      }
+
+      if (message.type === "LOGIFLOW_NOTIFICATION_STATUS") {
+        const status = message.payload?.status || "";
+        if (status === "permission-denied") {
+          showToast("알림 권한 필요", "기기 설정에서 LOGIFLOW 알림을 허용해 주세요.", "error");
+        }
+        return;
+      }
+
+      if (message.type === "LOGIFLOW_NOTIFICATION_FOREGROUND") {
+        const payload = message.payload || {};
+        showToast(payload.title || "LOGIFLOW", payload.body || "근태 기록을 확인해 주세요.");
+      }
     }
 
     function updateAutoLoginSetting(enabled) {
@@ -3934,6 +4027,7 @@
         syncNavigation();
         applyEmployeePayload(response.employee);
         writeSession(response);
+        requestNotificationRegistration();
         document.body.classList.add("login-complete");
         setView("employee");
         window.setTimeout(() => document.body.classList.remove("login-complete"), 350);
@@ -4194,7 +4288,11 @@
     $("logoutBtn").addEventListener("click", logout);
     $("adminModeBtn").addEventListener("click", enterAdminMode);
     $("firstPasswordBtn").addEventListener("click", () => changePasswordFromForm("first", $("firstPasswordBtn")));
-    $("appNotificationToggle").addEventListener("change", (event) => updateNotificationSetting(event.target.checked));
+    window.addEventListener("message", (event) => {
+      handleNotificationHostMessage(event).catch(() => showToast("알림 설정 실패", "알림 설정을 저장하지 못했습니다.", "error"));
+    });
+    $("appCheckinNotificationToggle").addEventListener("change", (event) => updateNotificationSetting("checkin", event.target.checked));
+    $("appCheckoutNotificationToggle").addEventListener("change", (event) => updateNotificationSetting("checkout", event.target.checked));
     $("appAutoLoginToggle").addEventListener("change", (event) => updateAutoLoginSetting(event.target.checked));
     $("appLockToggle").addEventListener("change", (event) => updateAppLockSetting(event.target.checked));
     $("refreshAppDataBtn").addEventListener("click", () => refreshApplicationData($("refreshAppDataBtn")));
