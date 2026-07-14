@@ -22,6 +22,7 @@
 
     * { box-sizing: border-box; }
     html, body { min-height: 100%; }
+    [hidden] { display: none !important; }
 
     body {
       margin: 0;
@@ -93,6 +94,40 @@
       font-size: 11px;
     }
 
+    .app-frame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #f7f8fa;
+    }
+
+    .permission-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+      background: rgba(17, 24, 39, .42);
+    }
+
+    .permission-dialog {
+      width: min(100%, 360px);
+      padding: 24px;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 18px 50px rgba(15, 23, 42, .18);
+    }
+
+    .permission-dialog h2 { margin: 0; font-size: 20px; line-height: 1.35; }
+    .permission-dialog p { margin: 10px 0 22px; color: #687386; font-size: 14px; line-height: 1.6; }
+    .permission-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .permission-actions button { height: 50px; border: 0; border-radius: 16px; font: inherit; font-weight: 650; cursor: pointer; }
+    .permission-actions .secondary { border: 1px solid #e2e7ef; background: #fff; color: #445066; }
+    .permission-actions .primary { background: #2563eb; color: #fff; }
+
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (prefers-reduced-motion: reduce) {
@@ -101,7 +136,7 @@
   </style>
 </head>
 <body>
-  <main class="launch-shell">
+  <main class="launch-shell" id="launchShell">
     <section class="launch-content" aria-live="polite">
       <div class="brand-mark" aria-hidden="true">L</div>
       <h1>LOGIFLOW</h1>
@@ -111,9 +146,21 @@
       <p class="version" id="appVersion">Version -</p>
     </section>
   </main>
+  <iframe class="app-frame" id="logiflowAppFrame" title="LOGIFLOW 근태관리" allow="geolocation" hidden></iframe>
+  <section class="permission-overlay" id="notificationPermissionPrompt" role="dialog" aria-modal="true" aria-labelledby="notificationPermissionTitle" hidden>
+    <div class="permission-dialog">
+      <h2 id="notificationPermissionTitle">출퇴근 알림을 허용할까요?</h2>
+      <p>출근 및 퇴근 등록 시간을 놓치지 않도록 필요한 알림만 보내드립니다.</p>
+      <div class="permission-actions">
+        <button class="secondary" id="notificationPermissionCancelBtn" type="button">나중에</button>
+        <button class="primary" id="notificationPermissionBtn" type="button">알림 허용</button>
+      </div>
+    </div>
+  </section>
   <script src="/config/app-config.js"></script>
   <script src="/config/firebase-config.js"></script>
   <script src="/js/firebase-bootstrap.js"></script>
+  <script src="/js/notification-service.js"></script>
   <script src="/js/app-bootstrap.js"></script>
 </body>
 </html>
