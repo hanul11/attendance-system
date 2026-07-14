@@ -8,7 +8,8 @@ const APP_SHELL = [
   "/config/app-config.js",
   "/config/firebase-config.js",
   "/js/app-bootstrap.js",
-  "/js/firebase-bootstrap.js"
+  "/js/firebase-bootstrap.js",
+  "/js/notification-service.js"
 ];
 
 importScripts("/firebase-messaging-sw.js");
