@@ -11,6 +11,13 @@
     "appStoreConnectAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
     "distribution": "TestFlight"
   },
+  "googlePlay": {
+    "packageName": "kr.co.hanul.logiflow",
+    "playConsoleAppId": "YOUR_GOOGLE_PLAY_APP_ID",
+    "distribution": "Internal testing",
+    "primaryArtifact": "AAB",
+    "directInstallArtifact": "APK"
+  },
   "firebase": {
     "projectId": "YOUR_FIREBASE_PROJECT_ID",
     "hostingUrl": "https://YOUR_FIREBASE_PROJECT_ID.web.app",
@@ -20,7 +27,8 @@
     "appsScriptUrl": "https://script.google.com/macros/s/AKfycbyd8ITba0px2wJHlzmxhkCF2Y0RpUQn9s93EJltDBKEabtL-4YJhVWqWWhL-MzvJtwY/exec"
   },
   "release": {
-    "channel": "internal-testflight",
+    "iosChannel": "internal-testflight",
+    "androidChannel": "internal-testing",
     "lastUpdated": "2026-07-15"
   }
 }
