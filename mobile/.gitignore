@@ -9,3 +9,9 @@ ios/App/Pods/
 ios/App/DerivedData/
 ios/App/App.xcworkspace/xcuserdata/
 *.mobileprovision
+*.p8
+*.p12
+*.cer
+*.xcarchive
+*.ipa
+DerivedData/
