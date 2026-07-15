@@ -1,0 +1,34 @@
+# LOGIFLOW Android 諛고룷 泥댄겕由ъ뒪??
+## Google Play 以鍮?
+- [ ] Google Play Console 媛쒕컻??怨꾩젙 以鍮?- [ ] ?⑦궎吏紐?`kr.co.hanul.logiflow`濡????앹꽦
+- [ ] ?대? ?뚯뒪???몃옓怨??뚯뒪??紐⑸줉 援ъ꽦
+- [ ] Play App Signing ?쒖꽦??
+## Firebase 以鍮?
+- [ ] Firebase??Android ???깅줉
+- [ ] `google-services.json`??`mobile/android/app/`??異붽?
+- [ ] Firebase Authentication, Messaging, Firestore ?ъ슜 ?щ? ?뺤젙
+
+## Android ?꾨줈?앺듃
+
+- [ ] `cd mobile && npm install`
+- [ ] `npm run add:android`
+- [ ] `npm run sync:android`
+- [ ] `npm run open:android`
+- [ ] 512x512 Play Store ?꾩씠肄섍낵 Adaptive Icon 以鍮?- [ ] ???쒖떆紐? Splash Screen, ?꾩튂 沅뚰븳 ?뺤씤
+
+## ?쒕챸怨??곗텧臾?
+- [ ] Upload Key? Keystore ?앹꽦
+- [ ] `release/android/keystore.properties.example`??李멸퀬??濡쒖뺄 ?ㅼ젙 ?앹꽦
+- [ ] Keystore? 鍮꾨?踰덊샇媛 GitHub???ы븿?섏? ?딆븯?붿? ?뺤씤
+- [ ] ?대? 吏곸젒 ?ㅼ튂???쒕챸 APK ?앹꽦
+- [ ] Google Play ?대? ?뚯뒪?몄슜 ?쒕챸 AAB ?앹꽦
+- [ ] ??諛고룷留덈떎 Version Code 利앷?
+
+## ?댁쁺 ?뺤씤
+
+- [ ] 怨좎젙 GPS 嫄곕━媛믪쓣 ?ㅼ젣 ?꾩튂 痢≪젙媛믪쑝濡?援먯껜
+- [ ] ?ㅼ젣 湲곌린?먯꽌 濡쒓렇?? ?먮룞 濡쒓렇?? GPS, 異쒓렐, ?닿렐 ?뺤씤
+- [ ] 洹쇳깭쨌?듦퀎쨌愿由ъ옄쨌怨듭??ы빆쨌?ㅼ젙 ?뺤씤
+- [ ] Google Sheets `洹쇳깭?꾪솴` ????뺤씤
+- [ ] `npm run qa:static` ?듦낵
+- [ ] `npm run release:check:android:strict` ?듦낵
