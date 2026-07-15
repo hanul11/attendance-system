@@ -106,11 +106,30 @@ try {
     }
   });
   check("Operational settings persistence", saved.settings.gps.enabled === false && saved.settings.gps.allowedRadiusM === 100, "Saved with Script Properties mock");
+  let unauthorizedRejected = false;
+  try {
+    operational.saveOperationalSettings({ adminEmployeeId: "1000001", gps: { enabled: true, allowedRadiusM: 50 }, notifications: {} });
+  } catch (error) {
+    unauthorizedRejected = /관리자/.test(error.message);
+  }
+  check("Operational settings admin guard", unauthorizedRejected, "Non-admin save rejected");
 } catch (error) {
   check("Operational settings checks", false, error.message);
+}
+
+try {
+  const gpsDistance = new Function(read("apps-script/Code.gs") + "; return getNearestGpsDistanceM_;")();
+  const distance = gpsDistance(37.863368698405246, 126.81681274938418, [{
+    latitude: 37.863368698405246,
+    longitude: 126.81681274938418
+  }]);
+  check("Server GPS distance calculation", distance === 0, "Factory coordinate -> 0m");
+} catch (error) {
+  check("Server GPS distance calculation", false, error.message);
 }
 
 for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail}`);
 for (const result of failures) console.error(`[FAIL] ${result.name}: ${result.detail}`);
 console.log(`${passes.length} passed, ${failures.length} failed`);
 if (failures.length) process.exitCode = 1;
+
