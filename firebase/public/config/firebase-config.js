@@ -2,6 +2,11 @@
 
 globalThis.LOGIFLOW_FIREBASE_CONFIG = Object.freeze({
   enabled: false,
+  features: Object.freeze({
+    authentication: false,
+    messaging: false,
+    firestore: false
+  }),
   apiKey: "YOUR_FIREBASE_API_KEY",
   authDomain: "YOUR_FIREBASE_PROJECT_ID.firebaseapp.com",
   projectId: "YOUR_FIREBASE_PROJECT_ID",
