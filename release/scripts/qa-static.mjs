@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => fs.readFileSync(path.join(rootDir, relativePath), "utf8");
-const codeFiles = ["apps-script/Config.gs", "apps-script/Utils.gs", "apps-script/Code.gs", "apps-script/Notifications.gs"];
+const codeFiles = ["apps-script/Config.gs", "apps-script/Utils.gs", "apps-script/OperationalSettings.gs", "apps-script/Code.gs", "apps-script/Notifications.gs"];
 const serverSource = codeFiles.map(read).join("\n");
 const html = read("apps-script/Index.html");
 const releaseConfig = JSON.parse(read("release/release-config.json"));
@@ -77,7 +77,59 @@ try {
   check("Attendance utility checks", false, error.message);
 }
 
+try {
+  const properties = {};
+  const scriptProperties = {
+    getProperties: () => ({ ...properties }),
+    setProperties: (values) => Object.assign(properties, values)
+  };
+  const operational = new Function(
+    "PropertiesService",
+    read("apps-script/Config.gs") + "\n" + read("apps-script/OperationalSettings.gs")
+      + "; return { getOperationalSettings, saveOperationalSettings };"
+  )({ getScriptProperties: () => scriptProperties });
+  const defaults = operational.getOperationalSettings();
+  check("Operational settings defaults", defaults.gps.enabled === true && defaults.gps.allowedRadiusM === 50, "GPS enabled, 50m radius");
+  check("Operational settings storage isolation", !/SpreadsheetApp|getRange|getValues|getDisplayValues/.test(read("apps-script/OperationalSettings.gs")), "Script Properties only");
+  const saved = operational.saveOperationalSettings({
+    adminEmployeeId: "2023068",
+    gps: { enabled: false, allowedRadiusM: 100 },
+    notifications: {
+      checkinNoticeEnabled: true,
+      checkinReminderEnabled: false,
+      checkoutNoticeEnabled: true,
+      checkoutReminderEnabled: false,
+      checkinNoticeTime: "07:00",
+      checkinReminderTime: "09:00",
+      checkoutNoticeTime: "18:00",
+      checkoutReminderTime: "20:00"
+    }
+  });
+  check("Operational settings persistence", saved.settings.gps.enabled === false && saved.settings.gps.allowedRadiusM === 100, "Saved with Script Properties mock");
+  let unauthorizedRejected = false;
+  try {
+    operational.saveOperationalSettings({ adminEmployeeId: "1000001", gps: { enabled: true, allowedRadiusM: 50 }, notifications: {} });
+  } catch (error) {
+    unauthorizedRejected = /관리자/.test(error.message);
+  }
+  check("Operational settings admin guard", unauthorizedRejected, "Non-admin save rejected");
+} catch (error) {
+  check("Operational settings checks", false, error.message);
+}
+
+try {
+  const gpsDistance = new Function(read("apps-script/Code.gs") + "; return getNearestGpsDistanceM_;")();
+  const distance = gpsDistance(37.863368698405246, 126.81681274938418, [{
+    latitude: 37.863368698405246,
+    longitude: 126.81681274938418
+  }]);
+  check("Server GPS distance calculation", distance === 0, "Factory coordinate -> 0m");
+} catch (error) {
+  check("Server GPS distance calculation", false, error.message);
+}
+
 for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail}`);
 for (const result of failures) console.error(`[FAIL] ${result.name}: ${result.detail}`);
 console.log(`${passes.length} passed, ${failures.length} failed`);
 if (failures.length) process.exitCode = 1;
+
