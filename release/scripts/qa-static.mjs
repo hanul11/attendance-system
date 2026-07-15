@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => fs.readFileSync(path.join(rootDir, relativePath), "utf8");
-const codeFiles = ["apps-script/Config.gs", "apps-script/Utils.gs", "apps-script/Code.gs", "apps-script/Notifications.gs"];
+const codeFiles = ["apps-script/Config.gs", "apps-script/Utils.gs", "apps-script/OperationalSettings.gs", "apps-script/Code.gs", "apps-script/Notifications.gs"];
 const serverSource = codeFiles.map(read).join("\n");
 const html = read("apps-script/Index.html");
 const releaseConfig = JSON.parse(read("release/release-config.json"));
@@ -75,6 +75,39 @@ try {
   check("Work-time calculation", utilities.computeWorkMinutes("9:00", "18:00") === 480, "09:00-18:00 minus 60 minutes = 480 minutes");
 } catch (error) {
   check("Attendance utility checks", false, error.message);
+}
+
+try {
+  const properties = {};
+  const scriptProperties = {
+    getProperties: () => ({ ...properties }),
+    setProperties: (values) => Object.assign(properties, values)
+  };
+  const operational = new Function(
+    "PropertiesService",
+    read("apps-script/Config.gs") + "\n" + read("apps-script/OperationalSettings.gs")
+      + "; return { getOperationalSettings, saveOperationalSettings };"
+  )({ getScriptProperties: () => scriptProperties });
+  const defaults = operational.getOperationalSettings();
+  check("Operational settings defaults", defaults.gps.enabled === true && defaults.gps.allowedRadiusM === 50, "GPS enabled, 50m radius");
+  check("Operational settings storage isolation", !/SpreadsheetApp|getRange|getValues|getDisplayValues/.test(read("apps-script/OperationalSettings.gs")), "Script Properties only");
+  const saved = operational.saveOperationalSettings({
+    adminEmployeeId: "2023068",
+    gps: { enabled: false, allowedRadiusM: 100 },
+    notifications: {
+      checkinNoticeEnabled: true,
+      checkinReminderEnabled: false,
+      checkoutNoticeEnabled: true,
+      checkoutReminderEnabled: false,
+      checkinNoticeTime: "07:00",
+      checkinReminderTime: "09:00",
+      checkoutNoticeTime: "18:00",
+      checkoutReminderTime: "20:00"
+    }
+  });
+  check("Operational settings persistence", saved.settings.gps.enabled === false && saved.settings.gps.allowedRadiusM === 100, "Saved with Script Properties mock");
+} catch (error) {
+  check("Operational settings checks", false, error.message);
 }
 
 for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail}`);
