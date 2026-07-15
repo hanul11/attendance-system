@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "LOGIFLOW",
+    "bundleId": "kr.co.hanul.logiflow",
+    "version": "1.0.0",
+    "buildNumber": 1,
+    "minimumIosVersion": "15.0"
+  },
+  "apple": {
+    "teamId": "YOUR_APPLE_TEAM_ID",
+    "appStoreConnectAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
+    "distribution": "TestFlight"
+  },
+  "firebase": {
+    "projectId": "YOUR_FIREBASE_PROJECT_ID",
+    "hostingUrl": "https://YOUR_FIREBASE_PROJECT_ID.web.app",
+    "enabled": false
+  },
+  "backend": {
+    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbyd8ITba0px2wJHlzmxhkCF2Y0RpUQn9s93EJltDBKEabtL-4YJhVWqWWhL-MzvJtwY/exec"
+  },
+  "release": {
+    "channel": "internal-testflight",
+    "lastUpdated": "2026-07-15"
+  }
+}

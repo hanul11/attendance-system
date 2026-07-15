@@ -4,8 +4,13 @@
   "private": true,
   "scripts": {
     "sync": "cap sync",
+    "add:ios": "cap add ios",
+    "sync:ios": "cap sync ios",
     "android": "cap open android",
-    "ios": "cap open ios"
+    "ios": "cap open ios",
+    "open:ios": "cap open ios",
+    "release:check": "node ../release/scripts/validate-release.mjs",
+    "release:check:strict": "node ../release/scripts/validate-release.mjs --strict"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.3.0",
