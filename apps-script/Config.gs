@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 1 seconds
-Output:
 var APP_CONSTANTS = Object.freeze({
   APP_NAME: 'LOGIFLOW',
   WEB_TITLE: 'LogiFlow Attendance',
