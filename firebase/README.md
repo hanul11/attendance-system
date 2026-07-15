@@ -1,56 +1,50 @@
-# LOGIFLOW Firebase 연결 가이드
+# 한울 출퇴근 기록 PWA
 
-이 디렉터리는 기존 Google Apps Script 근태 앱을 유지하면서 Firebase Hosting, Firestore, Cloud Messaging을 연결하기 위한 배포 구조입니다. Firebase 값은 모두 Placeholder이며, 실제 프로젝트를 연결하기 전에는 알림을 요청하거나 발송하지 않습니다.
+이 폴더는 기존 Google Apps Script 근태 앱을 Android와 iPhone에서 홈 화면에 설치할 수 있도록 제공하는 Firebase Hosting용 PWA 셸입니다. 로그인, GPS, 출퇴근 저장 및 Google Sheets 연동은 기존 Apps Script 앱이 계속 담당합니다.
 
 ## 구성
 
 ```text
 firebase/
-  functions/                 FCM 토큰 저장 및 알림 발송 API
   public/
+    assets/icons/            Android/iPhone 설치 아이콘
     config/                  앱 및 Firebase 환경설정
-    js/                      Apps Script 임베드 및 FCM 브리지
-    assets/icons/            PWA/알림 아이콘 위치
-    index.html               Firebase Hosting 진입 화면
-    manifest.webmanifest     PWA 설치 정보
-    service-worker.js        앱 셸 캐시
-    firebase-messaging-sw.js 백그라운드 웹 알림
-  firestore.rules            클라이언트 직접 접근 차단 규칙
+    js/                      Apps Script 임베드와 Firebase 준비 코드
+    index.html               PWA 시작 화면
+    manifest.webmanifest     설치 정보
+    service-worker.js        정적 앱 셸 캐시
+    firebase-messaging-sw.js 향후 FCM용 Service Worker
+  functions/                 향후 알림 연동용 구조
+  firestore.rules            Firestore 기본 규칙
 ```
 
-## Firebase 프로젝트 연결
+Service Worker는 같은 출처의 PWA 정적 파일만 캐시합니다. Apps Script iframe, Google Sheets 데이터, 로그인 정보, GPS 및 출퇴근 요청은 오프라인 캐시에 저장하지 않습니다.
 
-1. Firebase Console에서 Web, Android, iOS 앱을 생성합니다.
-2. `.firebaserc.example`의 프로젝트 ID를 채워 `.firebaserc`로 저장합니다.
-3. `public/config/firebase-config.js`의 Placeholder를 Web App 값으로 교체하고 `enabled`를 `true`로 바꿉니다.
-4. `public/config/app-config.js`와 `apps-script/Index.html`의 Firebase Hosting 도메인 Placeholder를 실제 도메인으로 교체합니다.
-5. Web Push 인증서의 VAPID 공개 키를 `firebase-config.js`에 입력합니다.
-6. Functions 비밀값을 등록합니다.
+## Android 설치
+
+1. Chrome에서 Firebase Hosting 주소를 엽니다.
+2. 브라우저 메뉴에서 `앱 설치` 또는 `홈 화면에 추가`를 선택합니다.
+3. 설치 후 홈 화면의 `한울 근태` 아이콘으로 실행합니다.
+
+## iPhone 설치
+
+1. Safari에서 Firebase Hosting 주소를 엽니다.
+2. 하단 공유 버튼을 누릅니다.
+3. `홈 화면에 추가`를 선택합니다.
+4. 추가된 `한울 근태` 아이콘으로 실행합니다.
+
+iPhone Safari는 Android Chrome처럼 설치 안내 배너를 자동으로 보여주지 않을 수 있으므로 공유 메뉴를 사용해야 합니다.
+
+## Firebase Hosting 연결
+
+1. Firebase Console에서 프로젝트를 생성합니다.
+2. `.firebaserc.example`을 기준으로 `.firebaserc`에 실제 프로젝트 ID를 설정합니다.
+3. `public/config/firebase-config.js`의 Placeholder를 실제 Web App 설정으로 교체합니다.
+4. Firebase CLI에서 로그인한 뒤 프로젝트 루트에서 배포합니다.
 
 ```text
-firebase functions:secrets:set LOGIFLOW_BRIDGE_SECRET
+firebase login
+firebase deploy --only hosting
 ```
 
-7. Apps Script의 스크립트 속성에 아래 값을 등록합니다.
-
-```text
-LOGIFLOW_NOTIFICATION_API_BASE_URL=https://asia-northeast3-YOUR_PROJECT_ID.cloudfunctions.net
-LOGIFLOW_NOTIFICATION_BRIDGE_SECRET=Functions와 동일한 비밀값
-```
-
-8. Apps Script 편집기에서 `setupNotificationTriggers`를 한 번 실행해 07:00, 09:00, 18:00, 20:00 예약 트리거를 생성합니다.
-
-Apps Script 시간 기반 트리거는 Google 정책상 지정 분 전후로 실행될 수 있습니다. 분 단위의 절대 정시 발송이 필요하면 추후 Cloud Scheduler로 전환합니다.
-
-## Firestore 구조
-
-알림 정보는 `notificationUsers/{employeeId}/devices/{tokenHash}`에 저장됩니다. 브라우저는 Firestore에 직접 쓰지 않으며, Apps Script가 직원 재직 상태를 확인한 뒤 비밀값으로 보호된 Cloud Function에 전달합니다. 현재 Firestore 규칙은 클라이언트 직접 접근을 차단합니다.
-
-## 배포 전 필수 자산
-
-- `public/assets/icons/icon-192.png`
-- `public/assets/icons/icon-512.png`
-- `public/assets/icons/icon-maskable-512.png`
-- `public/assets/icons/apple-touch-icon-180.png`
-
-실제 Firebase 배포, Functions 비밀값 등록, 트리거 실행은 이 Sprint에서 수행하지 않습니다.
+현재 단계에서는 실제 Firebase 프로젝트 연결과 Hosting 배포를 수행하지 않습니다.
