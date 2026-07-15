@@ -1,10 +1,15 @@
 node_modules/
 android/app/google-services.json
+android/keystore.properties
 ios/App/App/GoogleService-Info.plist
 android/.gradle/
 android/app/build/
 android/*.jks
 android/*.keystore
+*.jks
+*.keystore
+*.apk
+*.aab
 ios/App/Pods/
 ios/App/DerivedData/
 ios/App/App.xcworkspace/xcuserdata/
