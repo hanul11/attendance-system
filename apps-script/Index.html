@@ -1012,6 +1012,8 @@
     .attendance-calendar .day.weekday:first-child { color: #e26269; }
     .attendance-calendar .day.weekday:nth-child(7) { color: #4a75cf; }
     .attendance-calendar .day-number { width: 26px; height: 26px; font-size: 13px; font-weight: 650; }
+    .attendance-calendar .day.date-saturday .day-number { color: #3569c8; }
+    .attendance-calendar .day.date-sunday .day-number { color: #d14b55; }
     .attendance-calendar .day.today { border-color: rgba(37, 99, 235, .35); background: #f8faff; }
     .attendance-calendar .day.today .day-number { background: var(--blue); color: #fff; }
     .attendance-calendar .day.selected { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37, 99, 235, .08); }
@@ -1066,7 +1068,10 @@
     .attendance-recent-row { min-height: 64px; gap: 12px; padding: 11px 16px; border-bottom: 1px solid #edf1f5; }
     .attendance-recent-row:last-child { border-bottom: 0; }
     .attendance-recent-date strong { display: block; font-size: 13px; font-weight: 650; }
-    .attendance-recent-date span { display: block; margin-top: 3px; color: var(--faint); font-size: 10px; }
+    .attendance-recent-date .app-date,
+    .attendance-all-date .app-date,
+    .home-recent-date .app-date { white-space: nowrap; }
+    .attendance-recent-date > span { display: block; margin-top: 3px; color: var(--faint); font-size: 10px; }
     .attendance-recent-flow { display: flex; align-items: center; gap: 9px; color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 700; }
     .attendance-recent-flow .material-symbols-rounded { color: var(--faint); font-size: 17px; }
     .attendance-empty { padding: 24px 16px; color: var(--faint); font-size: 12px; text-align: center; }
@@ -1240,6 +1245,8 @@
     .stats-month-nav button:hover { background: var(--blue-soft); color: var(--blue); }
     .stats-month-nav button:active { transform: scale(.94); }
     .stats-month-nav strong { font-size: 17px; font-variant-numeric: tabular-nums; font-weight: 650; text-align: center; }
+    .stats-month-nav strong.is-date-range { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 4px; font-size: 13px; }
+    .stats-period-separator { color: var(--faint); }
     .stats-today-row { display: flex; justify-content: center; margin-bottom: 26px; }
     .stats-today-btn {
       min-width: 58px;
@@ -1748,6 +1755,72 @@
     .toast strong { display: block; font-size: 13px; }
     .toast span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
 
+    .app-date { color: inherit; }
+    .app-date.date-saturday,
+    .date-display.date-saturday { color: #3569c8; }
+    .app-date.date-sunday,
+    .date-display.date-sunday { color: #d14b55; }
+
+    .attendance-time-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 105;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, .34);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .18s ease, visibility .18s ease;
+    }
+    .attendance-time-modal.open { opacity: 1; visibility: visible; }
+    .attendance-time-card {
+      width: min(400px, 100%);
+      padding: 24px;
+      border: 1px solid rgba(220, 228, 239, .9);
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 24px 64px rgba(15, 23, 42, .18);
+      transform: translateY(8px) scale(.985);
+      transition: transform .18s ease;
+    }
+    .attendance-time-modal.open .attendance-time-card { transform: translateY(0) scale(1); }
+    .attendance-time-card h2 { margin: 0; font-size: 20px; font-weight: 700; }
+    .attendance-time-card > p { margin: 8px 0 20px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .attendance-time-options { display: grid; gap: 10px; }
+    .attendance-time-option { display: block; cursor: pointer; }
+    .attendance-time-option input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .attendance-time-choice {
+      display: flex;
+      min-height: 64px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 11px 15px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .attendance-time-choice::after {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      border: 2px solid #cbd4e1;
+      border-radius: 50%;
+      content: "";
+      box-shadow: inset 0 0 0 4px #fff;
+    }
+    .attendance-time-option input:checked + .attendance-time-choice { border-color: var(--blue); background: var(--blue-soft); }
+    .attendance-time-option input:checked + .attendance-time-choice::after { border-color: var(--blue); background: var(--blue); }
+    .attendance-time-option:active .attendance-time-choice { transform: scale(.99); }
+    .attendance-time-copy strong { display: block; font-size: 18px; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .attendance-time-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .attendance-time-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+    .attendance-time-actions button { min-height: 50px; border-radius: 16px; font-size: 13px; font-weight: 650; }
+    .attendance-time-actions .secondary { border: 1px solid var(--line); background: #fff; color: var(--text); }
+    .attendance-time-actions .primary { border: 1px solid var(--blue); background: var(--blue); color: #fff; }
+
     .app-dialog,
     .app-loading-overlay {
       position: fixed;
@@ -1976,7 +2049,7 @@
           <div class="home-greeting">
             <p class="home-kicker">안녕하세요.</p>
             <h1><span id="employeeName">-</span>님</h1>
-            <p class="home-date-copy">오늘은 <strong><span id="employeeDate">-</span> (<span id="employeeDay">-</span>)</strong></p>
+            <p class="home-date-copy">오늘은 <strong><span class="app-date" id="employeeDate">-</span></strong></p>
             <div class="home-status-row">
               <span class="home-work-status" id="homeWorkStatus"><span id="workStatusValue">출근 전</span></span>
               <span class="chip good" id="gpsChip"><span class="dot"></span><span id="gpsStatus">GPS 인증 완료</span></span>
@@ -2428,6 +2501,18 @@
     <div><strong id="toastTitle">등록 완료</strong><span id="toastMessage">Google Sheets에 저장되었습니다.</span></div>
   </div>
 
+  <div class="attendance-time-modal" id="attendanceTimeModal" role="dialog" aria-modal="true" aria-labelledby="attendanceTimeTitle" aria-describedby="attendanceTimeDescription" aria-hidden="true">
+    <div class="attendance-time-card">
+      <h2 id="attendanceTimeTitle">등록 시간 선택</h2>
+      <p id="attendanceTimeDescription">현재 시간을 기준으로 등록할 시간을 선택해 주세요.</p>
+      <div class="attendance-time-options" id="attendanceTimeOptions" role="radiogroup" aria-label="등록 시간"></div>
+      <div class="attendance-time-actions">
+        <button class="secondary" id="attendanceTimeCancel" type="button">취소</button>
+        <button class="primary" id="attendanceTimeConfirm" type="button">선택 시간 등록</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app-dialog" id="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMessage" aria-hidden="true">
     <div class="app-dialog-card">
       <div class="app-dialog-icon"><span class="material-symbols-rounded" id="appDialogIcon" aria-hidden="true">info</span></div>
@@ -2458,6 +2543,8 @@
       loadingFreshData: false,
       loginSaving: false,
       attendanceSaving: false,
+      attendanceTimeType: null,
+      attendanceTriggerButton: null,
       historyMonth: null,
       historyRows: [],
       historyCache: {},
@@ -2477,7 +2564,7 @@
       name: "LOGIFLOW",
       version: "1.0.0",
       buildNumber: "1",
-      lastUpdated: "2026.07.14",
+      lastUpdated: "2026.07.15",
       developer: "한울생약 품질보람팀"
     });
     const APP_VERSION = APP_META.version;
@@ -2490,6 +2577,7 @@
     ]);
     const VERIFIED_GPS_DISTANCE_M = 42;
     const DEFAULT_DEVICE_NAME = "LogiFlow PWA";
+    const KOREAN_WEEKDAYS = Object.freeze(["일", "월", "화", "수", "목", "금", "토"]);
 
     const navButtons = document.querySelectorAll(".nav button");
     const viewButtons = document.querySelectorAll("[data-open-view]");
@@ -2606,7 +2694,7 @@
       setText("appInfoName", APP_META.name);
       setText("appInfoVersion", "Version " + APP_META.version);
       setText("appInfoBuild", APP_META.buildNumber);
-      setText("appInfoUpdated", APP_META.lastUpdated);
+      setDateDisplay("appInfoUpdated", APP_META.lastUpdated);
       setText("appInfoDeveloper", APP_META.developer);
     }
 
@@ -2748,17 +2836,42 @@
       button.setAttribute("aria-label", willShow ? "비밀번호 숨김" : "비밀번호 보기");
     }
 
-    function getWeekdayText(dateText) {
-      const match = String(dateText || "").match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-      if (!match) return "-";
-      const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-      return ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"][date.getDay()];
+    function normalizeAppDate(value) {
+      if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : new Date(value);
+      }
+      return parseAttendanceDate(value);
     }
 
-    function formatHomeDate(dateText) {
-      const date = parseAttendanceDate(dateText);
-      if (!date) return dateText || "-";
-      return date.getFullYear() + "년 " + (date.getMonth() + 1) + "월 " + date.getDate() + "일";
+    function getDateToneClass(value) {
+      const date = normalizeAppDate(value);
+      if (!date) return "";
+      if (date.getDay() === 6) return "date-saturday";
+      if (date.getDay() === 0) return "date-sunday";
+      return "";
+    }
+
+    function formatAppDate(value) {
+      const date = normalizeAppDate(value);
+      if (!date) return String(value || "-");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return date.getFullYear() + "." + month + "." + day + " (" + KOREAN_WEEKDAYS[date.getDay()] + ")";
+    }
+
+    function dateDisplayHtml(value) {
+      const className = getDateToneClass(value);
+      return '<span class="app-date ' + className + '">' + escapeHtml(formatAppDate(value)) + "</span>";
+    }
+
+    function setDateDisplay(id, value, suffix) {
+      const target = $(id);
+      if (!target) return;
+      target.classList.add("date-display");
+      target.classList.remove("date-saturday", "date-sunday");
+      const className = getDateToneClass(value);
+      if (className) target.classList.add(className);
+      target.textContent = formatAppDate(value) + (suffix || "");
     }
 
     function formatClockTime(date) {
@@ -2808,6 +2921,79 @@
     function getCurrentMinutes() {
       const now = new Date();
       return now.getHours() * 60 + now.getMinutes();
+    }
+
+    function ceilToHalfHour(dateValue) {
+      const result = new Date(dateValue);
+      result.setSeconds(0, 0);
+      const minutes = result.getMinutes();
+
+      if (minutes > 0 && minutes < 30) {
+        result.setMinutes(30);
+      } else if (minutes > 30) {
+        result.setHours(result.getHours() + 1, 0, 0, 0);
+      }
+      return result;
+    }
+
+    function buildAttendanceTimeChoices(dateValue) {
+      const center = ceilToHalfHour(dateValue);
+      return [-30, 0, 30].map((offset) => new Date(center.getTime() + offset * 60000));
+    }
+
+    function formatAttendanceChoiceTime(dateValue) {
+      const date = new Date(dateValue);
+      return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
+    }
+
+    function openAttendanceTimeModal(type, button) {
+      if (!state.user) {
+        showToast("로그인이 필요합니다", "직원 계정으로 로그인해 주세요.", "error");
+        setView("login");
+        return;
+      }
+      if (state.attendanceSaving) return;
+
+      const now = new Date();
+      const choices = buildAttendanceTimeChoices(now);
+      state.attendanceTimeType = type;
+      state.attendanceTriggerButton = button;
+      setText("attendanceTimeTitle", type === "clockIn" ? "출근 시간 선택" : "퇴근 시간 선택");
+      setText("attendanceTimeDescription", "현재 " + formatAttendanceChoiceTime(now) + " 기준으로 등록할 시간을 선택해 주세요.");
+      $("attendanceTimeOptions").innerHTML = choices.map((choice, index) => `
+        <label class="attendance-time-option">
+          <input type="radio" name="attendanceTimeChoice" value="${choice.toISOString()}"${index === 1 ? " checked" : ""}>
+          <span class="attendance-time-choice">
+            <span class="attendance-time-copy"><strong>${formatAttendanceChoiceTime(choice)}</strong><span>${dateDisplayHtml(choice)}</span></span>
+          </span>
+        </label>
+      `).join("");
+
+      const modal = $("attendanceTimeModal");
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      window.setTimeout(() => $("attendanceTimeConfirm").focus(), 40);
+    }
+
+    function closeAttendanceTimeModal() {
+      const modal = $("attendanceTimeModal");
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    function confirmAttendanceTime() {
+      const selected = document.querySelector('input[name="attendanceTimeChoice"]:checked');
+      const selectedAt = selected ? new Date(selected.value) : null;
+      const type = state.attendanceTimeType;
+      const button = state.attendanceTriggerButton;
+
+      if (!selectedAt || Number.isNaN(selectedAt.getTime()) || !type) {
+        showToast("등록 시간 확인", "등록할 시간을 선택해 주세요.", "error");
+        return;
+      }
+
+      closeAttendanceTimeModal();
+      submitAttendance(type, button, selectedAt);
     }
 
     function getDisplayWorkTime(today) {
@@ -2878,8 +3064,7 @@
       const now = new Date();
       const dateText = state.employee?.today?.date || formatSheetDate(now);
       setText("employeeTime", formatClockTime(now));
-      setText("employeeDate", formatHomeDate(dateText));
-      setText("employeeDay", getWeekdayText(dateText));
+      setDateDisplay("employeeDate", dateText);
 
       if (!state.employee?.today) return;
 
@@ -3137,8 +3322,7 @@
       const dateText = today.date || payload.generatedAt;
       const status = getWorkStatus(today);
       $("employeeName").textContent = payload.employee.name;
-      $("employeeDate").textContent = formatHomeDate(dateText);
-      $("employeeDay").textContent = getWeekdayText(dateText);
+      setDateDisplay("employeeDate", dateText);
       $("clockInValue").textContent = dash(today.clockIn);
       $("clockOutValue").textContent = dash(today.clockOut);
       $("clockInFoot").textContent = today.clockIn ? "출근 등록 완료" : "미등록";
@@ -3219,7 +3403,7 @@
       setText("adminClockOut", summary.clockOutCount || 0);
       setText("adminAbsent", summary.absentCount || 0);
       setText("adminClockOutMissing", Math.max(0, Number(summary.clockInCount || 0) - Number(summary.clockOutCount || 0)));
-      setText("adminTodayLabel", formatHomeDate(payload.today || new Date()) + " 오늘 근태 현황");
+      setDateDisplay("adminTodayLabel", payload.today || new Date(), " 오늘 근태 현황");
       setText("adminRosterCount", "직원 " + (payload.rows || []).length + "명 연동");
 
       const deptSelect = $("adminDept");
@@ -3289,9 +3473,8 @@
       return "range:" + formatStatsInputDate(period.start) + ":" + formatStatsInputDate(period.end);
     }
 
-    function formatStatsPeriodLabel(period) {
-      const format = (date) => date.getFullYear() + "." + String(date.getMonth() + 1).padStart(2, "0") + "." + String(date.getDate()).padStart(2, "0");
-      return format(period.start) + " ~ " + format(period.end);
+    function formatStatsPeriodHtml(period) {
+      return dateDisplayHtml(period.start) + '<span class="stats-period-separator"> ~ </span>' + dateDisplayHtml(period.end);
     }
 
     function getActiveStatsKey() {
@@ -3306,9 +3489,13 @@
         button.setAttribute("aria-selected", String(active));
       });
       const month = getStatsMonthDate(state.statsMonth || new Date());
-      setText("statsMonthLabel", state.statsMode === "week"
-        ? formatStatsPeriodLabel(state.statsPeriod || getStatsWeekPeriod(new Date()))
-        : month.getFullYear() + "년 " + (month.getMonth() + 1) + "월");
+      const statsMonthLabel = $("statsMonthLabel");
+      statsMonthLabel.classList.toggle("is-date-range", state.statsMode === "week");
+      if (state.statsMode === "week") {
+        statsMonthLabel.innerHTML = formatStatsPeriodHtml(state.statsPeriod || getStatsWeekPeriod(new Date()));
+      } else {
+        statsMonthLabel.textContent = month.getFullYear() + "년 " + (month.getMonth() + 1) + "월";
+      }
       setText("statsTodayMonth", state.statsMode === "week" ? "이번 주" : "이번 달");
     }
 
@@ -3555,7 +3742,7 @@
           <div class="home-recent-row">
             <div class="home-recent-main">
               <span class="home-recent-icon"><span class="material-symbols-rounded" aria-hidden="true">history</span></span>
-              <span><span class="home-recent-date">${escapeHtml(row.date)}</span><span class="home-recent-state">${stateLabel}</span></span>
+              <span><span class="home-recent-date">${dateDisplayHtml(row.date)}</span><span class="home-recent-state">${stateLabel}</span></span>
             </div>
             <div class="home-recent-times"><span>출근 <strong>${escapeHtml(dash(row.clockIn))}</strong></span><span>퇴근 <strong>${escapeHtml(dash(row.clockOut))}</strong></span></div>
           </div>
@@ -3612,7 +3799,8 @@
           year === state.selectedAttendanceDate.getFullYear() &&
           month === state.selectedAttendanceDate.getMonth() &&
           day === state.selectedAttendanceDate.getDate();
-        const classes = ["day", isToday ? "today" : "", isSelected ? "selected" : ""].filter(Boolean).join(" ");
+        const weekendClass = date.getDay() === 0 ? "date-sunday" : date.getDay() === 6 ? "date-saturday" : "";
+        const classes = ["day", weekendClass, isToday ? "today" : "", isSelected ? "selected" : ""].filter(Boolean).join(" ");
         const clockTime = row?.clockIn ? `<span class="attendance-clock-time">${escapeHtml(row.clockIn)}</span>` : "";
         const stateBadge = dayState ? `<span class="attendance-state-badge ${dayState.key}">${dayState.label}</span>` : "";
         return `<button class="${classes}" type="button" data-day="${day}"><span class="day-number">${day}</span>${clockTime}${stateBadge}</button>`;
@@ -3623,13 +3811,6 @@
         button.addEventListener("click", () => selectCalendarDay(Number(button.dataset.day), byDay));
       });
       renderAttendanceAllRows(monthRows);
-    }
-
-    function formatAttendanceDetailDate(date) {
-      const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return date.getFullYear() + "." + month + "." + day + " (" + weekday + ")";
     }
 
     function formatAttendanceDuration(value) {
@@ -3651,7 +3832,7 @@
       document.querySelectorAll("#calendarGrid .day[data-day]").forEach((item) => {
         item.classList.toggle("selected", Number(item.dataset.day) === day);
       });
-      setText("selectedDateTitle", formatAttendanceDetailDate(selectedDate));
+      setDateDisplay("selectedDateTitle", selectedDate);
       setText("detailClockIn", dash(row.clockIn));
       setText("detailClockOut", dash(row.clockOut));
       setText("detailWorkTime", formatAttendanceDuration(row.workTime));
@@ -3669,11 +3850,9 @@
 
       $("attendanceRecentRows").innerHTML = recentRows.map((row) => {
         const date = parseAttendanceDate(row.date);
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
         return `
           <div class="attendance-recent-row">
-            <div class="attendance-recent-date"><strong>${month}/${day}</strong></div>
+            <div class="attendance-recent-date"><strong>${dateDisplayHtml(date)}</strong></div>
             <div class="attendance-recent-flow">
               <strong>${escapeHtml(dash(row.clockIn))}</strong>
               <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
@@ -3692,7 +3871,7 @@
 
       $("attendanceAllRows").innerHTML = monthRows.map((row) => `
         <div class="attendance-all-row">
-          <span class="attendance-all-date">${escapeHtml(row.date)}</span>
+          <span class="attendance-all-date">${dateDisplayHtml(row.date)}</span>
           <span data-label="출근">${escapeHtml(dash(row.clockIn))}</span>
           <span data-label="퇴근">${escapeHtml(dash(row.clockOut))}</span>
           <span data-label="근무시간">${escapeHtml(dash(row.workTime))}</span>
@@ -3977,7 +4156,7 @@
       state.refreshTimer = window.setTimeout(() => refreshEmployeeInBackground(), 1400);
     }
 
-    async function submitAttendance(type, button) {
+    async function submitAttendance(type, button, selectedAt) {
       if (!state.user) {
         showToast("로그인이 필요합니다", "직원 계정으로 로그인해 주세요.", "error");
         setView("login");
@@ -3985,6 +4164,10 @@
       }
 
       if (state.attendanceSaving) return;
+      if (!(selectedAt instanceof Date) || Number.isNaN(selectedAt.getTime())) {
+        showToast("등록 시간 확인", "등록할 시간을 다시 선택해 주세요.", "error");
+        return;
+      }
 
       state.attendanceSaving = true;
       setAttendanceBusy(true, type);
@@ -3992,6 +4175,7 @@
         const response = await callServer("registerAttendance", {
           employeeId: state.user.employeeId,
           type,
+          actualAt: selectedAt.toISOString(),
           gpsDistanceM: VERIFIED_GPS_DISTANCE_M,
           device: DEFAULT_DEVICE_NAME
         });
@@ -4278,6 +4462,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && $("attendanceDetailModal").classList.contains("open")) closeAttendanceDetail();
       if (event.key === "Escape" && $("adminEmployeeDetail").classList.contains("open")) closeAdminEmployeeDetail();
+      if (event.key === "Escape" && $("attendanceTimeModal").classList.contains("open")) closeAttendanceTimeModal();
       if (event.key === "Escape" && $("appDialog").classList.contains("open")) closeAppDialog(false);
     });
     $("loginBtn").addEventListener("click", login);
@@ -4311,8 +4496,13 @@
     $("appDialog").addEventListener("click", (event) => {
       if (event.target === event.currentTarget) closeAppDialog(false);
     });
-    $("clockInBtn").addEventListener("click", () => submitAttendance("clockIn", $("clockInBtn")));
-    $("clockOutBtn").addEventListener("click", () => submitAttendance("clockOut", $("clockOutBtn")));
+    $("attendanceTimeConfirm").addEventListener("click", confirmAttendanceTime);
+    $("attendanceTimeCancel").addEventListener("click", closeAttendanceTimeModal);
+    $("attendanceTimeModal").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeAttendanceTimeModal();
+    });
+    $("clockInBtn").addEventListener("click", () => openAttendanceTimeModal("clockIn", $("clockInBtn")));
+    $("clockOutBtn").addEventListener("click", () => openAttendanceTimeModal("clockOut", $("clockOutBtn")));
     $("leaveBtn").addEventListener("click", () => showToast("연차 등록 준비", "연차 저장 시트는 다음 단계에서 연결합니다."));
     $("adminRefreshBtn").addEventListener("click", () => refreshAdmin($("adminRefreshBtn")));
     bootstrap();

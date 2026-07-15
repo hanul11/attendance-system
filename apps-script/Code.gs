@@ -43,10 +43,6 @@ const CONFIG = Object.freeze({
   passwordResetSheetName: SHEET_NAMES.passwordReset,
   adminEmployeeId: '2023068',
   timezone: 'Asia/Seoul',
-  attendancePolicy: {
-    workStartMinutes: 9 * 60,
-    clockInOpenBeforeMinutes: 30
-  },
   gps: {
     allowedRadiusM: 200
   }
@@ -245,10 +241,6 @@ function registerAttendance(request) {
 
     if (input.gpsDistanceM > CONFIG.gps.allowedRadiusM) {
       throw createOperationalError('회사 반경 내에서만 출퇴근 등록이 가능합니다.', LOG_EVENTS.gpsFailed);
-    }
-
-    if (input.type === 'clockIn') {
-      assertClockInRegistrationWindow(input.actualAt);
     }
 
     const attendanceSheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
@@ -733,22 +725,6 @@ function normalizeAttendanceRequest(request) {
     gpsDistanceM,
     device: String(input.device || '').trim()
   };
-}
-
-function assertClockInRegistrationWindow(actualAt) {
-  const currentMinutes = getMinutesInTimezone(actualAt);
-  const openMinutes = CONFIG.attendancePolicy.workStartMinutes
-    - CONFIG.attendancePolicy.clockInOpenBeforeMinutes;
-
-  if (currentMinutes < openMinutes) {
-    throw createOperationalError('출근 등록 가능 시간이 아닙니다.', '', true);
-  }
-}
-
-function getMinutesInTimezone(dateValue) {
-  const hour = Number(Utilities.formatDate(dateValue, CONFIG.timezone, 'H'));
-  const minute = Number(Utilities.formatDate(dateValue, CONFIG.timezone, 'm'));
-  return hour * 60 + minute;
 }
 
 function readRosterEmployees(ss) {
