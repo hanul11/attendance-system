@@ -15,14 +15,6 @@ const LABELS = Object.freeze({
   passwordResetAt: '\uBE44\uBC00\uBC88\uD638\uCD08\uAE30\uD654\uC77C\uC2DC'
 });
 
-const SHEET_NAMES = Object.freeze({
-  employee: '\uC9C1\uC6D0 \uC0AC\uBC88 \uBA85\uB2E8',
-  attendance: '\uADFC\uD0DC\uD604\uD669',
-  attendanceLog: '\uADFC\uD0DC \uB85C\uADF8',
-  notice: '\uACF5\uC9C0\uC0AC\uD56D',
-  passwordReset: '\uBE44\uBC00\uBC88\uD638 \uCD08\uAE30\uD654 \uC694\uCCAD'
-});
-
 const LOG_EVENTS = Object.freeze({
   clockIn: LABELS.clockIn,
   clockOut: LABELS.clockOut,
@@ -33,25 +25,10 @@ const LOG_EVENTS = Object.freeze({
   systemError: '\uC2DC\uC2A4\uD15C \uC624\uB958'
 });
 
-const CONFIG = Object.freeze({
-  spreadsheetId: '1Zkm_mqrljBLFO_k2sAgCcgLWDKJhH01PqGK8MnGwOyE',
-  rosterSheetName: SHEET_NAMES.employee,
-  rosterSheetCandidates: ['\uC9C1\uC6D0\uAD00\uB9AC(Master)', '\uC9C1\uC6D0\uAD00\uB9AC', SHEET_NAMES.employee],
-  attendanceSheetName: SHEET_NAMES.attendance,
-  logSheetName: SHEET_NAMES.attendanceLog,
-  noticeSheetName: SHEET_NAMES.notice,
-  passwordResetSheetName: SHEET_NAMES.passwordReset,
-  adminEmployeeId: '2023068',
-  timezone: 'Asia/Seoul',
-  gps: {
-    allowedRadiusM: 200
-  }
-});
-
 function doGet() {
   return HtmlService
     .createHtmlOutputFromFile('Index')
-    .setTitle('LogiFlow Attendance')
+    .setTitle(CONFIG.webTitle)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
@@ -61,7 +38,7 @@ function login(request) {
   const employeeId = String(input.employeeId || '').trim();
 
   if (!employeeId) {
-    throw new Error('사번을 입력해 주세요.');
+    throw new Error('?щ쾲???낅젰??二쇱꽭??');
   }
 
   let ss = null;
@@ -72,11 +49,11 @@ function login(request) {
     employee = findEmployeeById(ss, employeeId);
 
     if (!employee) {
-      throw createOperationalError('등록된 사번을 찾을 수 없습니다.', LOG_EVENTS.unknownEmployeeLogin);
+      throw createOperationalError('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.', LOG_EVENTS.unknownEmployeeLogin);
     }
 
     if (employee.status !== LABELS.employed) {
-      throw createOperationalError('재직 상태인 직원만 로그인할 수 있습니다.', '', true);
+      throw createOperationalError('?ъ쭅 ?곹깭??吏곸썝留?濡쒓렇?명븷 ???덉뒿?덈떎.', '', true);
     }
 
     const role = employee.employeeId === CONFIG.adminEmployeeId ? 'admin' : 'employee';
@@ -110,19 +87,19 @@ function changePassword(request) {
   const newPassword = String(input.newPassword || '').trim();
 
   if (!employeeId || !currentPassword || !newPassword) {
-    throw new Error('현재 비밀번호와 새 비밀번호를 모두 입력해 주세요.');
+    throw new Error('?꾩옱 鍮꾨?踰덊샇? ??鍮꾨?踰덊샇瑜?紐⑤몢 ?낅젰??二쇱꽭??');
   }
 
   if (newPassword.length < 4) {
-    throw new Error('새 비밀번호는 4자리 이상으로 입력해 주세요.');
+    throw new Error('??鍮꾨?踰덊샇??4?먮━ ?댁긽?쇰줈 ?낅젰??二쇱꽭??');
   }
 
   if (!isValidNewPassword(newPassword)) {
-    throw new Error('새 비밀번호는 영문과 숫자를 모두 포함해 주세요.');
+    throw new Error('??鍮꾨?踰덊샇???곷Ц怨??レ옄瑜?紐⑤몢 ?ы븿??二쇱꽭??');
   }
 
   if (newPassword === currentPassword) {
-    throw new Error('새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.');
+    throw new Error('??鍮꾨?踰덊샇???꾩옱 鍮꾨?踰덊샇? ?ㅻⅤ寃??낅젰??二쇱꽭??');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
@@ -131,11 +108,11 @@ function changePassword(request) {
   const employee = findEmployeeById(ss, employeeId);
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   if (!verifyEmployeePassword(employee, currentPassword).ok) {
-    throw new Error('현재 비밀번호가 일치하지 않습니다.');
+    throw new Error('?꾩옱 鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎.');
   }
 
   sheet.getRange(employee.row, indexes.passwordHash + 1).setValue(hashPassword(employeeId, newPassword));
@@ -159,14 +136,14 @@ function requestPasswordReset(request) {
   const employeeId = String(input.employeeId || '').trim();
 
   if (!employeeId) {
-    throw new Error('초기화를 요청할 사번을 입력해 주세요.');
+    throw new Error('珥덇린?붾? ?붿껌???щ쾲???낅젰??二쇱꽭??');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
   const employee = findEmployeeById(ss, employeeId);
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   const sheet = ensurePasswordResetSheet(ss);
@@ -175,14 +152,14 @@ function requestPasswordReset(request) {
     employee.employeeId,
     employee.name,
     employee.department,
-    '대기',
+    '?湲?,
     '',
     ''
   ]);
 
   return {
     ok: true,
-    message: '관리자에게 비밀번호 초기화 요청을 보냈습니다.'
+    message: '愿由ъ옄?먭쾶 鍮꾨?踰덊샇 珥덇린???붿껌??蹂대깉?듬땲??'
   };
 }
 
@@ -192,11 +169,11 @@ function resetEmployeePassword(request) {
   const targetEmployeeId = String(input.employeeId || '').trim();
 
   if (adminEmployeeId !== CONFIG.adminEmployeeId) {
-    throw new Error('관리자 계정에서만 초기화할 수 있습니다.');
+    throw new Error('愿由ъ옄 怨꾩젙?먯꽌留?珥덇린?뷀븷 ???덉뒿?덈떎.');
   }
 
   if (!targetEmployeeId) {
-    throw new Error('초기화할 사번을 확인해 주세요.');
+    throw new Error('珥덇린?뷀븷 ?щ쾲???뺤씤??二쇱꽭??');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
@@ -205,7 +182,7 @@ function resetEmployeePassword(request) {
   const employee = findEmployeeById(ss, targetEmployeeId);
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   sheet.getRange(employee.row, indexes.passwordHash + 1).setValue(hashPassword(targetEmployeeId, targetEmployeeId));
@@ -232,15 +209,15 @@ function registerAttendance(request) {
     employee = findEmployeeById(ss, input.employeeId);
 
     if (!employee) {
-      throw createOperationalError('등록된 사번을 찾을 수 없습니다.', '', true);
+      throw createOperationalError('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.', '', true);
     }
 
     if (employee.status !== LABELS.employed) {
-      throw createOperationalError('재직 상태인 직원만 출퇴근 등록이 가능합니다.', '', true);
+      throw createOperationalError('?ъ쭅 ?곹깭??吏곸썝留?異쒗눜洹??깅줉??媛?ν빀?덈떎.', '', true);
     }
 
     if (input.gpsDistanceM > CONFIG.gps.allowedRadiusM) {
-      throw createOperationalError('회사 반경 내에서만 출퇴근 등록이 가능합니다.', LOG_EVENTS.gpsFailed);
+      throw createOperationalError('?뚯궗 諛섍꼍 ?댁뿉?쒕쭔 異쒗눜洹??깅줉??媛?ν빀?덈떎.', LOG_EVENTS.gpsFailed);
     }
 
     const attendanceSheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
@@ -262,8 +239,8 @@ function registerAttendance(request) {
     if (targetCell.getDisplayValue()) {
       throw createOperationalError(
         input.type === 'clockIn'
-          ? '해당 일자는 이미 출근 등록이 완료되었습니다.'
-          : '해당 일자는 이미 퇴근 등록이 완료되었습니다.',
+          ? '?대떦 ?쇱옄???대? 異쒓렐 ?깅줉???꾨즺?섏뿀?듬땲??'
+          : '?대떦 ?쇱옄???대? ?닿렐 ?깅줉???꾨즺?섏뿀?듬땲??',
         input.type === 'clockIn' ? LOG_EVENTS.duplicateClockIn : LOG_EVENTS.duplicateClockOut
       );
     }
@@ -360,7 +337,7 @@ function getEmployeeDashboard(employeeId) {
   const employee = findEmployeeById(ss, employeeId);
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   return buildEmployeeDashboard(ss, employee);
@@ -393,7 +370,7 @@ function buildEmployeeDashboard(ss, employee) {
     summary,
     statistics: buildAttendanceStatistics(attendanceRows, rows, now),
     gps: {
-      site: '한울생약 제2공장',
+      site: '?쒖슱?앹빟 ??怨듭옣',
       distanceM: 42,
       allowedRadiusM: CONFIG.gps.allowedRadiusM,
       verified: true
@@ -409,14 +386,14 @@ function getMonthlyAttendance(request) {
   const month = Number(input.month);
 
   if (!employeeId || !year || !month) {
-    throw new Error('조회할 사번과 월을 확인해 주세요.');
+    throw new Error('議고쉶???щ쾲怨??붿쓣 ?뺤씤??二쇱꽭??');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
   const employee = findEmployeeById(ss, employeeId);
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   const sheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
@@ -442,18 +419,18 @@ function getAttendanceByRange(request) {
   const endDate = parseIsoDateText(input.endDate);
 
   if (!employeeId || !startDate || !endDate) {
-    throw new Error('조회할 사번과 기간을 확인해 주세요.');
+    throw new Error('議고쉶???щ쾲怨?湲곌컙???뺤씤??二쇱꽭??');
   }
 
   if (startDate.getTime() > endDate.getTime()) {
-    throw new Error('시작일은 종료일보다 늦을 수 없습니다.');
+    throw new Error('?쒖옉?쇱? 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
   const employee = findEmployeeById(ss, employeeId);
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   const sheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
@@ -495,10 +472,10 @@ function getAdminDashboard(request) {
     .filter(Boolean))).sort();
   const rows = roster
     .filter(function (employee) {
-      if (filters.department && filters.department !== '전체 부서' && employee.department !== filters.department) return false;
+      if (filters.department && filters.department !== '?꾩껜 遺?? && employee.department !== filters.department) return false;
       if (filters.name && employee.name.indexOf(filters.name) < 0) return false;
       if (filters.employeeId && employee.employeeId.indexOf(filters.employeeId) < 0) return false;
-      if (filters.status && filters.status !== '전체' && employee.status !== filters.status) return false;
+      if (filters.status && filters.status !== '?꾩껜' && employee.status !== filters.status) return false;
       return true;
     })
     .map(function (employee) {
@@ -519,7 +496,7 @@ function getAdminDashboard(request) {
         ot: day.ot,
         leaveUsed: day.leaveUsed,
         gpsDistanceM: lastLog ? lastLog.gpsDistanceM : '',
-        sheetsStatus: block ? '완료' : '대기'
+        sheetsStatus: block ? '?꾨즺' : '?湲?
       };
     });
   const activeEmployees = roster.filter(function (employee) {
@@ -562,20 +539,20 @@ function buildAdminAttention(rows, pendingSync) {
   if (pendingSync.length) {
     attention.push({
       badge: 'SYNC',
-      title: '명단 동기화 필요',
-      detail: pendingSync.length + '명의 직원이 ' + CONFIG.attendanceSheetName + ' 시트에 아직 반영되지 않았습니다.',
-      status: '동기화'
+      title: '紐낅떒 ?숆린???꾩슂',
+      detail: pendingSync.length + '紐낆쓽 吏곸썝??' + CONFIG.attendanceSheetName + ' ?쒗듃???꾩쭅 諛섏쁺?섏? ?딆븯?듬땲??',
+      status: '?숆린??
     });
   }
 
   rows.forEach(function (row) {
     if (row.status !== LABELS.employed) {
-      if (row.sheetsStatus === '완료') {
+      if (row.sheetsStatus === '?꾨즺') {
         attention.push({
           badge: 'OFF',
-          title: row.name + ' 퇴사자 컬럼 확인',
-          detail: '퇴사 처리된 직원입니다. 필요 시 ' + CONFIG.attendanceSheetName + ' 시트 컬럼 숨김 대상으로 관리합니다.',
-          status: '확인'
+          title: row.name + ' ?댁궗??而щ읆 ?뺤씤',
+          detail: '?댁궗 泥섎━??吏곸썝?낅땲?? ?꾩슂 ??' + CONFIG.attendanceSheetName + ' ?쒗듃 而щ읆 ?④? ??곸쑝濡?愿由ы빀?덈떎.',
+          status: '?뺤씤'
         });
       }
       return;
@@ -584,9 +561,9 @@ function buildAdminAttention(rows, pendingSync) {
     if (!row.clockIn) {
       attention.push({
         badge: 'IN',
-        title: row.name + ' 출근 미등록',
-        detail: row.department + ' · ' + row.employeeId,
-        status: '미등록'
+        title: row.name + ' 異쒓렐 誘몃벑濡?,
+        detail: row.department + ' 쨌 ' + row.employeeId,
+        status: '誘몃벑濡?
       });
       return;
     }
@@ -594,9 +571,9 @@ function buildAdminAttention(rows, pendingSync) {
     if (!row.clockOut) {
       attention.push({
         badge: 'OUT',
-        title: row.name + ' 퇴근 미등록',
-        detail: row.department + ' · ' + row.employeeId + ' · 출근 ' + row.clockIn,
-        status: '대기'
+        title: row.name + ' ?닿렐 誘몃벑濡?,
+        detail: row.department + ' 쨌 ' + row.employeeId + ' 쨌 異쒓렐 ' + row.clockIn,
+        status: '?湲?
       });
     }
   });
@@ -623,51 +600,16 @@ function getEmployeeBlocksByNameFromValues(names, headers) {
   for (let index = 0; index < names.length; index += 1) {
     const employeeName = String(names[index] || '').trim();
 
-    if (!employeeName) {
-      continue;
-    }
-
-    const startColumn = index + 1;
-    const headerSlice = headers.slice(index, index + 6);
-    const clockInOffset = headerSlice.indexOf(LABELS.clockIn);
-    const clockOutOffset = headerSlice.indexOf(LABELS.clockOut);
-
-    if (clockInOffset < 0 || clockOutOffset < 0) {
-      continue;
-    }
-
-    blocksByName[employeeName] = {
-      startColumn,
-      clockInColumn: startColumn + clockInOffset,
-      clockOutColumn: startColumn + clockOutOffset
-    };
-  }
-
-  return blocksByName;
-}
-
-function findDateRowValues(values, dateText) {
-  for (let rowIndex = 2; rowIndex <= values.length; rowIndex += 1) {
-    const row = values[rowIndex - 1];
-    if (String(row[0] || '').trim() === dateText) {
-      return row;
-    }
-  }
-
-  return null;
-}
-
-function updateEmployeeStatus(request) {
-  const input = request || {};
+    if (!employeeName)…208 tokens truncated…st || {};
   const employeeId = String(input.employeeId || '').trim();
   const status = String(input.status || '').trim();
 
   if (!employeeId) {
-    throw new Error('사번을 확인해 주세요.');
+    throw new Error('?щ쾲???뺤씤??二쇱꽭??');
   }
 
-  if (status !== LABELS.employed && status !== '퇴사') {
-    throw new Error('재직상태는 재직 또는 퇴사만 사용할 수 있습니다.');
+  if (status !== LABELS.employed && status !== '?댁궗') {
+    throw new Error('?ъ쭅?곹깭???ъ쭅 ?먮뒗 ?댁궗留??ъ슜?????덉뒿?덈떎.');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
@@ -679,7 +621,7 @@ function updateEmployeeStatus(request) {
   })[0];
 
   if (!employee) {
-    throw new Error('등록된 사번을 찾을 수 없습니다.');
+    throw new Error('?깅줉???щ쾲??李얠쓣 ???놁뒿?덈떎.');
   }
 
   sheet.getRange(employee.row, indexes.status + 1).setValue(status);
@@ -702,19 +644,19 @@ function normalizeAttendanceRequest(request) {
   const gpsDistanceM = Number(input.gpsDistanceM);
 
   if (!employeeId) {
-    throw new Error('사번을 입력해 주세요.');
+    throw new Error('?щ쾲???낅젰??二쇱꽭??');
   }
 
   if (type !== 'clockIn' && type !== 'clockOut') {
-    throw new Error('출근 또는 퇴근 유형을 확인해 주세요.');
+    throw new Error('異쒓렐 ?먮뒗 ?닿렐 ?좏삎???뺤씤??二쇱꽭??');
   }
 
   if (Number.isNaN(actualAt.getTime())) {
-    throw new Error('등록 시간을 확인해 주세요.');
+    throw new Error('?깅줉 ?쒓컙???뺤씤??二쇱꽭??');
   }
 
   if (!Number.isFinite(gpsDistanceM)) {
-    throw new Error('GPS 거리 정보를 확인해 주세요.');
+    throw new Error('GPS 嫄곕━ ?뺣낫瑜??뺤씤??二쇱꽭??');
   }
 
   return {
@@ -782,7 +724,7 @@ function getRosterIndexesFromHeaders(headers, sheetName) {
     }
 
     if (indexes[key] < 0) {
-      throw new Error(sheetName + ' 시트의 필수 컬럼을 확인해 주세요.');
+      throw new Error(sheetName + ' ?쒗듃???꾩닔 而щ읆???뺤씤??二쇱꽭??');
     }
   });
 
@@ -797,7 +739,7 @@ function getRosterSheet(ss) {
     }
   }
 
-  throw new Error('직원관리(Master) 또는 직원 사번 명단 시트를 찾을 수 없습니다.');
+  throw new Error('吏곸썝愿由?Master) ?먮뒗 吏곸썝 ?щ쾲 紐낅떒 ?쒗듃瑜?李얠쓣 ???놁뒿?덈떎.');
 }
 
 function ensureRosterSecurityColumns(sheet) {
@@ -841,7 +783,7 @@ function verifyEmployeePassword(employee, password) {
 
 function shouldChangePassword(employee) {
   const flag = String(employee.passwordChangeRequired || '').trim().toUpperCase();
-  return !employee.passwordHash || flag === 'Y' || flag === 'YES' || flag === 'TRUE' || flag === '필요';
+  return !employee.passwordHash || flag === 'Y' || flag === 'YES' || flag === 'TRUE' || flag === '?꾩슂';
 }
 
 function isValidNewPassword(password) {
@@ -867,7 +809,7 @@ function ensurePasswordResetSheet(ss) {
   }
 
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(['요청일시', LABELS.employeeId, LABELS.name, LABELS.department, '상태', '처리일시', '처리자']);
+    sheet.appendRow(['?붿껌?쇱떆', LABELS.employeeId, LABELS.name, LABELS.department, '?곹깭', '泥섎━?쇱떆', '泥섎━??]);
     sheet.setFrozenRows(1);
   }
 
@@ -886,7 +828,7 @@ function readOpenPasswordResetRequests(ss) {
   const requests = [];
 
   values.forEach(function (row, index) {
-    if (String(row[4] || '').trim() !== '대기') {
+    if (String(row[4] || '').trim() !== '?湲?) {
       return;
     }
 
@@ -915,8 +857,8 @@ function closePasswordResetRequests(ss, employeeId, adminEmployeeId) {
 
   values.forEach(function (row, index) {
     const targetRow = index + 2;
-    if (String(row[1] || '').trim() === employeeId && String(row[4] || '').trim() === '대기') {
-      sheet.getRange(targetRow, 5, 1, 3).setValues([['완료', formatDateTime(new Date()), adminEmployeeId]]);
+    if (String(row[1] || '').trim() === employeeId && String(row[4] || '').trim() === '?湲?) {
+      sheet.getRange(targetRow, 5, 1, 3).setValues([['?꾨즺', formatDateTime(new Date()), adminEmployeeId]]);
     }
   });
 }
@@ -998,14 +940,14 @@ function findLastEmployeeBlockStart(sheet) {
     }
   }
 
-  throw new Error('복사할 직원 컬럼 블록을 찾을 수 없습니다.');
+  throw new Error('蹂듭궗??吏곸썝 而щ읆 釉붾줉??李얠쓣 ???놁뒿?덈떎.');
 }
 
 function findEmployeeBlock(sheet, employeeName) {
   const block = findEmployeeBlockOrNull(sheet, employeeName);
 
   if (!block) {
-    throw new Error(employeeName + ' 직원 컬럼을 ' + CONFIG.attendanceSheetName + ' 시트에서 찾을 수 없습니다.');
+    throw new Error(employeeName + ' 吏곸썝 而щ읆??' + CONFIG.attendanceSheetName + ' ?쒗듃?먯꽌 李얠쓣 ???놁뒿?덈떎.');
   }
 
   return block;
@@ -1025,7 +967,7 @@ function findEmployeeBlockOrNull(sheet, employeeName) {
       const clockOutOffset = headerSlice.indexOf(LABELS.clockOut);
 
       if (clockInOffset < 0 || clockOutOffset < 0) {
-        throw new Error(employeeName + ' 직원의 출근/퇴근 컬럼을 찾을 수 없습니다.');
+        throw new Error(employeeName + ' 吏곸썝??異쒓렐/?닿렐 而щ읆??李얠쓣 ???놁뒿?덈떎.');
       }
 
       return {
@@ -1087,10 +1029,6 @@ function readAttendanceRows(sheet, block) {
   return rows.sort(function (left, right) {
     return attendanceDateToTimestamp(left.date) - attendanceDateToTimestamp(right.date);
   });
-}
-
-function readMonthlyAttendanceRows(sheet, block, year, month) {
-  return filterAttendanceRowsByMonth(readAttendanceRows(sheet, block), year, month);
 }
 
 function filterAttendanceRowsByMonth(rows, year, month) {
@@ -1248,86 +1186,6 @@ function getLastLogsByEmployeeId(ss) {
   return logsByEmployeeId;
 }
 
-function cleanSheetDisplay(value) {
-  const text = String(value || '').trim();
-  return text === '-' ? '' : text;
-}
-
-function parseSheetDateText(value) {
-  const match = String(value || '').trim().match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  return {
-    year: Number(match[1]),
-    month: Number(match[2]),
-    day: Number(match[3])
-  };
-}
-
-function parseIsoDateText(value) {
-  const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  return date.getFullYear() === Number(match[1])
-    && date.getMonth() === Number(match[2]) - 1
-    && date.getDate() === Number(match[3])
-    ? date
-    : null;
-}
-
-function computeWorkMinutes(clockInText, clockOutText) {
-  const clockIn = parseTimeToMinutes(clockInText);
-  const clockOut = parseTimeToMinutes(clockOutText);
-
-  if (clockIn === null || clockOut === null || clockOut <= clockIn) {
-    return 0;
-  }
-
-  const breakMinutes = clockOut >= (18 * 60 + 30) ? 90 : 60;
-  return Math.max(0, clockOut - clockIn - breakMinutes);
-}
-
-function parseTimeToMinutes(value) {
-  const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  return Number(match[1]) * 60 + Number(match[2]);
-}
-
-function durationTextToMinutes(value) {
-  const text = String(value || '').trim();
-
-  if (!text || text === '-') {
-    return 0;
-  }
-
-  const match = text.match(/^(\d+):(\d{2})$/);
-
-  if (match) {
-    return Number(match[1]) * 60 + Number(match[2]);
-  }
-
-  const numeric = Number(text);
-  return Number.isFinite(numeric) ? Math.round(numeric * 60) : 0;
-}
-
-function formatDurationMinutes(minutes) {
-  const safeMinutes = Math.max(0, Number(minutes) || 0);
-  const hours = Math.floor(safeMinutes / 60);
-  const rest = safeMinutes % 60;
-  return hours + ':' + String(rest).padStart(2, '0');
-}
-
 function createOperationalError(message, eventType, skipOperationalLog) {
   const error = new Error(message);
   error.logEventType = eventType || '';
@@ -1397,55 +1255,8 @@ function getRequiredSheet(ss, sheetName) {
   const sheet = ss.getSheetByName(sheetName);
 
   if (!sheet) {
-    throw new Error(sheetName + ' 시트를 찾을 수 없습니다.');
+    throw new Error(sheetName + ' ?쒗듃瑜?李얠쓣 ???놁뒿?덈떎.');
   }
 
   return sheet;
-}
-
-function floorToHalfHour(dateValue) {
-  const result = new Date(dateValue);
-  const minutes = result.getMinutes();
-
-  result.setSeconds(0, 0);
-  result.setMinutes(minutes < 30 ? 0 : 30);
-
-  return result;
-}
-
-function timeToSheetSerial(dateValue) {
-  return (dateValue.getHours() * 60 + dateValue.getMinutes()) / 1440;
-}
-
-function stripTime(dateValue) {
-  return new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
-}
-
-function formatDate(dateValue) {
-  return Utilities.formatDate(dateValue, CONFIG.timezone, 'yyyy. M. d');
-}
-
-function formatIsoDate(dateValue) {
-  return Utilities.formatDate(dateValue, CONFIG.timezone, 'yyyy-MM-dd');
-}
-
-function formatTime(dateValue) {
-  return Utilities.formatDate(dateValue, CONFIG.timezone, 'H:mm');
-}
-
-function formatDateTime(dateValue) {
-  return Utilities.formatDate(dateValue, CONFIG.timezone, 'yyyy. M. d H:mm:ss');
-}
-
-function columnToLetter(column) {
-  let value = '';
-  let current = column;
-
-  while (current > 0) {
-    const remainder = (current - 1) % 26;
-    value = String.fromCharCode(65 + remainder) + value;
-    current = Math.floor((current - remainder) / 26);
-  }
-
-  return value;
 }
