@@ -1,0 +1,7 @@
+<!-- Add these keys to the generated iOS App/Info.plist. -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>?뚯궗 諛섍꼍 ??異쒗눜洹??깅줉???꾪빐 ?꾩옱 ?꾩튂瑜??뺤씤?⑸땲??</string>
+<key>UIBackgroundModes</key>
+<array>
+  <string>remote-notification</string>
+</array>
