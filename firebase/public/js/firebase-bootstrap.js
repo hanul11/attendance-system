@@ -8,35 +8,50 @@
     return window.LOGIFLOW_FIREBASE_CONFIG || {};
   }
 
-  function hasRequiredConfig(config) {
+  function featureEnabled(config, feature) {
+    return config.features?.[feature] === true;
+  }
+
+  function hasBaseConfig(config) {
     return Boolean(
       config.enabled === true &&
       config.apiKey && !config.apiKey.startsWith("YOUR_") &&
       config.projectId && !config.projectId.startsWith("YOUR_") &&
-      config.appId && !config.appId.startsWith("YOUR_") &&
+      config.appId && !config.appId.startsWith("YOUR_")
+    );
+  }
+
+  function hasMessagingConfig(config) {
+    return Boolean(
+      hasBaseConfig(config) &&
+      featureEnabled(config, "messaging") &&
       config.vapidKey && !config.vapidKey.startsWith("YOUR_")
     );
   }
 
   async function loadServices() {
     const config = getConfig();
-    if (!hasRequiredConfig(config)) {
+    if (!hasBaseConfig(config)) {
       return { enabled: false, reason: "not-configured" };
     }
 
     if (!servicesPromise) {
       servicesPromise = Promise.all([
         import("https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-app.js"),
-        import("https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-messaging.js")
+        featureEnabled(config, "authentication")
+          ? import("https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-auth.js")
+          : null,
+        featureEnabled(config, "firestore")
+          ? import("https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-firestore.js")
+          : null,
+        hasMessagingConfig(config)
+          ? import("https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-messaging.js")
+          : null
       ]).then(async function (modules) {
         const appModule = modules[0];
-        const messagingModule = modules[1];
-        const supported = await messagingModule.isSupported();
-
-        if (!supported) {
-          return { enabled: false, reason: "messaging-not-supported" };
-        }
-
+        const authModule = modules[1];
+        const firestoreModule = modules[2];
+        const messagingModule = modules[3];
         const app = appModule.getApps().length
           ? appModule.getApp()
           : appModule.initializeApp({
@@ -47,13 +62,20 @@
               messagingSenderId: config.messagingSenderId,
               appId: config.appId
             });
+        const messagingSupported = messagingModule
+          ? await messagingModule.isSupported()
+          : false;
 
         return {
           enabled: true,
           config: config,
-          messaging: messagingModule.getMessaging(app),
-          getToken: messagingModule.getToken,
-          onMessage: messagingModule.onMessage
+          app: app,
+          auth: authModule ? authModule.getAuth(app) : null,
+          firestore: firestoreModule ? firestoreModule.getFirestore(app) : null,
+          messagingEnabled: messagingSupported,
+          messaging: messagingSupported ? messagingModule.getMessaging(app) : null,
+          getToken: messagingSupported ? messagingModule.getToken : null,
+          onMessage: messagingSupported ? messagingModule.onMessage : null
         };
       });
     }
@@ -64,6 +86,7 @@
   async function getRegistrationToken(serviceWorkerRegistration) {
     const services = await loadServices();
     if (!services.enabled) return services;
+    if (!services.messagingEnabled) return { enabled: false, reason: "messaging-not-configured" };
 
     const token = await services.getToken(services.messaging, {
       vapidKey: services.config.vapidKey,
@@ -78,16 +101,18 @@
   async function listenForeground(listener) {
     const services = await loadServices();
     if (!services.enabled) return services;
+    if (!services.messagingEnabled) return { enabled: false, reason: "messaging-not-configured" };
     services.onMessage(services.messaging, listener);
     return { enabled: true };
   }
 
   window.LOGIFLOW_FIREBASE = Object.freeze({
     initialize: loadServices,
+    getServices: loadServices,
     getRegistrationToken: getRegistrationToken,
     listenForeground: listenForeground,
     isConfigured: function () {
-      return hasRequiredConfig(getConfig());
+      return hasMessagingConfig(getConfig());
     }
   });
 })(window);
