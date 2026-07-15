@@ -73,6 +73,22 @@
 
     .status.is-error { color: #c2413b; }
 
+    .launch-button {
+      width: 100%;
+      height: 52px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 16px;
+      background: #2563eb;
+      color: #fff;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .launch-button:active { transform: scale(.98); }
+
     .loader {
       width: 24px;
       height: 24px;
@@ -136,8 +152,9 @@
       <img class="brand-mark" src="/assets/icons/icon-192.png" alt="">
       <h1>한울 출퇴근 기록</h1>
       <p class="subtitle">스마트 근태관리</p>
-      <div class="loader" aria-hidden="true"></div>
+      <div class="loader" id="launchLoader" aria-hidden="true"></div>
       <p class="status" id="launchStatus">앱을 준비하고 있습니다.</p>
+      <button class="launch-button" id="launchButton" type="button" hidden>근태 앱 열기</button>
       <p class="version" id="appVersion">Version -</p>
     </section>
   </main>
