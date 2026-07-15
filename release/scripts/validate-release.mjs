@@ -101,7 +101,13 @@ if (/YOUR_[A-Z0-9_]+/.test(firebaseConfig) || /enabled:\s*false/.test(firebaseCo
   add("pass", "Firebase client config", "Firebase initialization is enabled.");
 }
 
-const iconCandidates = ["mobile/resources/icon.png", "mobile/resources/icon-only.png", "mobile/resources/ios/AppIcon-1024.png", "mobile/resources/android/play-store-icon-512.png"];
+const iconCandidates = [
+  "firebase/public/assets/icons/icon-512.png",
+  "mobile/resources/icon.png",
+  "mobile/resources/icon-only.png",
+  "mobile/resources/ios/AppIcon-1024.png",
+  "mobile/resources/android/play-store-icon-512.png"
+];
 add(iconCandidates.some(exists) ? "pass" : "block", "App icon source", iconCandidates.some(exists) ? "A release icon source exists." : "Add release icon sources under mobile/resources.");
 
 const gpsConstant = findValue(appHtml, /const VERIFIED_GPS_DISTANCE_M\s*=\s*([^;]+);/);

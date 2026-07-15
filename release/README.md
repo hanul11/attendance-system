@@ -1,35 +1,40 @@
-# LOGIFLOW Release 以鍮?
-???대뜑??Google Apps Script? Google Sheets 洹쇳깭 濡쒖쭅???좎??섎㈃??iPhone TestFlight? Android ??諛고룷瑜?以鍮꾪븯???ㅼ젙怨??먭? ?먮즺瑜?愿由ы빀?덈떎.
+# LOGIFLOW Release 준비
 
-## 湲곗? ?ㅼ젙
+이 폴더는 기존 Google Apps Script 및 Google Sheets 근태 로직을 유지하면서 PWA, iPhone, Android 배포에 필요한 설정과 검증 자료를 관리합니다.
 
-`release-config.json`?먯꽌 ???앸퀎?? 踰꾩쟾, 鍮뚮뱶 踰덊샇, Apple, Google Play, Firebase ?곌껐媛믪쓣 愿由ы빀?덈떎. 怨꾩젙??以鍮꾨릺硫?Placeholder瑜??ㅼ젣 媛믪쑝濡?援먯껜?⑸땲??
+## 정적 QA
 
-## ?뺤쟻 QA
-
-```text
-cd mobile
-npm run qa:static
-```
-
-Apps Script API ?곌껐, 以묐났 ?⑥닔, DOM ?곌껐, JavaScript 臾몃쾿, 30遺??⑥쐞 踰꾨┝怨?湲곕낯 洹쇰Т?쒓컙 怨꾩궛?????ㅽ뻾 ?놁씠 ?뺤씤?⑸땲??
-
-## ?뚮옯?쇰퀎 Release ?먭?
+프로젝트 루트에서 다음 검증을 실행합니다.
 
 ```text
-npm run release:check:ios
-npm run release:check:android
+node release/scripts/qa-static.mjs
 ```
 
-諛고룷 李⑤떒 ??ぉ???ㅻ쪟 肄붾뱶濡?泥섎━?섎젮硫??뚮옯?쇰퀎 `:strict` 紐낅졊???ъ슜?⑸땲?? ?꾩껜 ?먭?? `npm run release:check`?낅땲??
+검증 항목에는 Apps Script API 연결, 중복 함수, DOM 연결, JavaScript 문법, 30분 단위 버림 규칙, 운영 설정, PWA manifest, 모바일 메타데이터, Service Worker 캐시 경로 및 설치 아이콘 크기가 포함됩니다.
 
-## ?⑦궎吏??먮쫫
+## Release 설정 점검
 
-1. Firebase? ?ㅽ넗??怨꾩젙 ?뺣낫瑜??ㅼ젙?⑸땲??
-2. `mobile`?먯꽌 ?섏〈?깆쓣 ?ㅼ튂?섍퀬 iOS/Android ?ㅼ씠?곕툕 ?꾨줈?앺듃瑜??앹꽦?⑸땲??
-3. Firebase Hosting ?멸낵 Capacitor ?ㅼ젙???숆린?뷀빀?덈떎.
-4. ?ㅼ젣 ?꾩씠肄? Firebase ?뚮옯???ㅼ젙 ?뚯씪, ?꾩튂 沅뚰븳??異붽??⑸땲??
-5. ?뺤쟻 QA? ?뚮옯?쇰퀎 Release ?먭????듦낵?⑸땲??
-6. iOS??Xcode Archive ??TestFlight, Android???쒕챸 AAB瑜??대? ?뚯뒪???몃옓???낅줈?쒗빀?덈떎.
+```text
+node release/scripts/validate-release.mjs
+node release/scripts/validate-release.mjs --platform=ios
+node release/scripts/validate-release.mjs --platform=android
+```
 
-?곸꽭 ?쒖꽌??`TESTFLIGHT-CHECKLIST.md`? `ANDROID-RELEASE-CHECKLIST.md`瑜?李멸퀬?⑸땲??
+Firebase 프로젝트, Apple 서명, Google Play 등록 정보처럼 실제 계정이 필요한 항목은 설정 전까지 `BLOCK`으로 표시될 수 있습니다.
+
+## PWA 배포 순서
+
+1. `release/release-config.json`의 버전과 빌드 번호를 확인합니다.
+2. Firebase 프로젝트 ID와 Web App 설정을 입력합니다.
+3. 정적 QA가 모두 통과하는지 확인합니다.
+4. Firebase CLI로 Hosting만 배포합니다.
+5. Android Chrome과 iPhone Safari에서 설치 후 로그인, GPS 권한 및 출퇴근 연결을 실제 기기로 확인합니다.
+
+PWA 설치는 HTTPS Hosting 주소에서만 정상 동작합니다. `file://` 주소나 Apps Script 편집기 미리보기 주소는 설치용 운영 주소로 사용하지 않습니다.
+
+## 사용자 계정이 필요한 후속 작업
+
+- Firebase 프로젝트 생성 및 Hosting 배포
+- 실제 Android 기기에서 Chrome 설치 확인
+- 실제 iPhone에서 Safari 홈 화면 추가 확인
+- Apple Developer 및 Google Play 계정을 사용하는 네이티브 패키징 작업

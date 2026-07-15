@@ -7,11 +7,11 @@
   <meta name="color-scheme" content="light">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="LOGIFLOW">
+  <meta name="apple-mobile-web-app-title" content="한울 근태">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>LOGIFLOW</title>
+  <title>한울 출퇴근 기록</title>
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon-180.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon-180.png">
   <style>
     :root {
       color-scheme: light;
@@ -43,16 +43,11 @@
     }
 
     .brand-mark {
-      width: 52px;
-      height: 52px;
+      width: 72px;
+      height: 72px;
       margin: 0 auto 20px;
-      display: grid;
-      place-items: center;
-      border-radius: 16px;
-      background: #2563eb;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 800;
+      display: block;
+      object-fit: contain;
     }
 
     h1 {
@@ -138,8 +133,8 @@
 <body>
   <main class="launch-shell" id="launchShell">
     <section class="launch-content" aria-live="polite">
-      <div class="brand-mark" aria-hidden="true">L</div>
-      <h1>LOGIFLOW</h1>
+      <img class="brand-mark" src="/assets/icons/icon-192.png" alt="">
+      <h1>한울 출퇴근 기록</h1>
       <p class="subtitle">스마트 근태관리</p>
       <div class="loader" aria-hidden="true"></div>
       <p class="status" id="launchStatus">앱을 준비하고 있습니다.</p>

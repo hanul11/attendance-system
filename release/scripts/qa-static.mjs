@@ -20,6 +20,50 @@ function functionNames(source) {
   return [...source.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((match) => match[1]);
 }
 
+function pngDimensions(relativePath) {
+  const filePath = path.join(rootDir, relativePath);
+  if (!fs.existsSync(filePath)) return null;
+  const buffer = fs.readFileSync(filePath);
+  const pngSignature = "89504e470d0a1a0a";
+  if (buffer.length < 24 || buffer.subarray(0, 8).toString("hex") !== pngSignature) return null;
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+try {
+  const manifest = JSON.parse(read("firebase/public/manifest.webmanifest"));
+  const pwaHtml = read("firebase/public/index.html");
+  const serviceWorker = read("firebase/public/service-worker.js");
+  const expectedIcons = [
+    ["firebase/public/assets/icons/icon-192.png", 192, 192],
+    ["firebase/public/assets/icons/icon-512.png", 512, 512],
+    ["firebase/public/assets/icons/icon-maskable-512.png", 512, 512],
+    ["firebase/public/assets/icons/apple-touch-icon-180.png", 180, 180]
+  ];
+
+  check("PWA app name", manifest.name === "한울 출퇴근 기록", manifest.name);
+  check("PWA short name", manifest.short_name === "한울 근태", manifest.short_name);
+  check("PWA standalone mode", manifest.display === "standalone", manifest.display);
+  check("PWA start URL", manifest.start_url === "/?source=pwa", manifest.start_url);
+  check("PWA mobile metadata", [
+    /name=["']viewport["'][^>]*viewport-fit=cover/i,
+    /name=["']theme-color["'][^>]*#2563eb/i,
+    /rel=["']manifest["'][^>]*\/manifest\.webmanifest/i,
+    /rel=["']apple-touch-icon["'][^>]*sizes=["']180x180["'][^>]*\/assets\/icons\/apple-touch-icon-180\.png/i
+  ].every((pattern) => pattern.test(pwaHtml)), "Viewport, theme, manifest and Apple icon metadata");
+
+  for (const [relativePath, width, height] of expectedIcons) {
+    const dimensions = pngDimensions(relativePath);
+    check(
+      `PWA icon ${path.basename(relativePath)}`,
+      dimensions?.width === width && dimensions?.height === height,
+      dimensions ? `${dimensions.width}x${dimensions.height}` : "Missing or invalid PNG"
+    );
+    check("Service Worker icon cache " + path.basename(relativePath), serviceWorker.includes("/" + relativePath.replace("firebase/public/", "").replaceAll("\\", "/")), relativePath);
+  }
+} catch (error) {
+  check("PWA installation contract", false, error.message);
+}
+
 try {
   const appConstants = new Function(read("apps-script/Config.gs") + "; return APP_CONSTANTS;")();
   check("Config app version", appConstants.VERSION === releaseConfig.app.version, `${appConstants.VERSION}`);
@@ -132,4 +176,3 @@ for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail
 for (const result of failures) console.error(`[FAIL] ${result.name}: ${result.detail}`);
 console.log(`${passes.length} passed, ${failures.length} failed`);
 if (failures.length) process.exitCode = 1;
-
