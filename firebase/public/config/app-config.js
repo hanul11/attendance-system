@@ -1,7 +1,7 @@
 "use strict";
 
 window.LOGIFLOW_APP_CONFIG = Object.freeze({
-  appName: "LOGIFLOW",
+  appName: "한울 출퇴근 기록",
   version: "1.0.0",
   buildNumber: "1",
   themeColor: "#2563eb",
