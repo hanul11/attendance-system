@@ -1,6 +1,9 @@
+Exit code: 0
+Wall time: 1 seconds
+Output:
 "use strict";
 
-const CACHE_NAME = "hanul-attendance-shell-v3";
+const CACHE_NAME = "hanul-attendance-shell-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -66,3 +69,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
