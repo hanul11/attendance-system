@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.9 seconds
+Output:
 {
   "app": {
     "name": "LOGIFLOW",
@@ -24,7 +27,7 @@
     "enabled": false
   },
   "backend": {
-    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbyd8ITba0px2wJHlzmxhkCF2Y0RpUQn9s93EJltDBKEabtL-4YJhVWqWWhL-MzvJtwY/exec"
+    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbwoZlxexxXTQRBAud0wnggy5vCuQfzvUcKkEAFksqmPQqHN8CFBU6T_jYS0IPXuX1cK/exec"
   },
   "release": {
     "iosChannel": "internal-testflight",
@@ -32,3 +35,4 @@
     "lastUpdated": "2026-07-15"
   }
 }
+
