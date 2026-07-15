@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.9 seconds
+Output:
 "use strict";
 
 window.LOGIFLOW_APP_CONFIG = Object.freeze({
@@ -6,7 +9,7 @@ window.LOGIFLOW_APP_CONFIG = Object.freeze({
   buildNumber: "1",
   themeColor: "#2563eb",
   backgroundColor: "#f7f8fa",
-  apiUrl: "https://script.google.com/macros/s/AKfycbyd8ITba0px2wJHlzmxhkCF2Y0RpUQn9s93EJltDBKEabtL-4YJhVWqWWhL-MzvJtwY/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbwoZlxexxXTQRBAud0wnggy5vCuQfzvUcKkEAFksqmPQqHN8CFBU6T_jYS0IPXuX1cK/exec",
   serviceWorkerPath: "/service-worker.js",
   launchMode: "redirect",
   trustedAppOrigins: Object.freeze([
@@ -14,3 +17,4 @@ window.LOGIFLOW_APP_CONFIG = Object.freeze({
     "https://script.googleusercontent.com"
   ])
 });
+
