@@ -1,9 +1,12 @@
+Exit code: 0
+Wall time: 1 seconds
+Output:
 var APP_CONSTANTS = Object.freeze({
   APP_NAME: 'LOGIFLOW',
   WEB_TITLE: 'LogiFlow Attendance',
   VERSION: '1.0.0',
   BUILD: '1',
-  WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyd8ITba0px2wJHlzmxhkCF2Y0RpUQn9s93EJltDBKEabtL-4YJhVWqWWhL-MzvJtwY/exec',
+  WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwoZlxexxXTQRBAud0wnggy5vCuQfzvUcKkEAFksqmPQqHN8CFBU6T_jYS0IPXuX1cK/exec',
   GOOGLE_SHEET_ID: '1Zkm_mqrljBLFO_k2sAgCcgLWDKJhH01PqGK8MnGwOyE'
 });
 
