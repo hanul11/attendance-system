@@ -4,13 +4,21 @@
   "private": true,
   "scripts": {
     "sync": "cap sync",
+    "add:android": "cap add android",
     "add:ios": "cap add ios",
+    "sync:android": "cap sync android",
     "sync:ios": "cap sync ios",
     "android": "cap open android",
     "ios": "cap open ios",
+    "open:android": "cap open android",
     "open:ios": "cap open ios",
+    "qa:static": "node ../release/scripts/qa-static.mjs",
     "release:check": "node ../release/scripts/validate-release.mjs",
-    "release:check:strict": "node ../release/scripts/validate-release.mjs --strict"
+    "release:check:ios": "node ../release/scripts/validate-release.mjs --platform=ios",
+    "release:check:android": "node ../release/scripts/validate-release.mjs --platform=android",
+    "release:check:strict": "node ../release/scripts/validate-release.mjs --strict",
+    "release:check:ios:strict": "node ../release/scripts/validate-release.mjs --platform=ios --strict",
+    "release:check:android:strict": "node ../release/scripts/validate-release.mjs --platform=android --strict"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.3.0",
