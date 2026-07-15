@@ -4,6 +4,8 @@
   const config = window.LOGIFLOW_APP_CONFIG || {};
   const statusElement = document.getElementById("launchStatus");
   const versionElement = document.getElementById("appVersion");
+  const launchButton = document.getElementById("launchButton");
+  const launchLoader = document.getElementById("launchLoader");
 
   function setStatus(message, isError) {
     if (!statusElement) return;
@@ -42,13 +44,34 @@
     window.location.replace(buildTargetUrl(config.apiUrl));
   }
 
+  function isStandalone() {
+    return Boolean(
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      navigator.standalone === true
+    );
+  }
+
+  function showInstallScreen() {
+    if (launchLoader) launchLoader.hidden = true;
+    if (launchButton) {
+      launchButton.hidden = false;
+      launchButton.addEventListener("click", redirectToApp, { once: true });
+    }
+    setStatus("홈 화면에 추가한 뒤 앱 아이콘으로 실행해 주세요.", false);
+  }
+
   async function start() {
     if (versionElement) {
       versionElement.textContent = "Version " + (config.version || "-") + " · Build " + (config.buildNumber || "-");
     }
 
     await registerServiceWorker();
-    redirectToApp();
+    if (isStandalone()) {
+      redirectToApp();
+      return;
+    }
+
+    showInstallScreen();
   }
 
   if (document.readyState === "loading") {
