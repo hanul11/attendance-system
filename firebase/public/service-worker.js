@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "hanul-attendance-shell-v4";
+const CACHE_NAME = "hanul-attendance-shell-v5";
 const APP_SHELL = [
   "/",
   "/index.html",

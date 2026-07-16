@@ -20,7 +20,6 @@ const LOG_EVENTS = Object.freeze({
   clockOut: LABELS.clockOut,
   duplicateClockIn: '\uCD9C\uADFC \uC911\uBCF5 \uB4F1\uB85D \uC2DC\uB3C4',
   duplicateClockOut: '\uD1F4\uADFC \uC911\uBCF5 \uB4F1\uB85D \uC2DC\uB3C4',
-  gpsFailed: 'GPS \uC778\uC99D \uC2E4\uD328',
   unknownEmployeeLogin: '\uC874\uC7AC\uD558\uC9C0 \uC54A\uB294 \uC0AC\uBC88 \uB85C\uADF8\uC778 \uC2DC\uB3C4',
   systemError: '\uC2DC\uC2A4\uD15C \uC624\uB958'
 });
@@ -216,19 +215,6 @@ function registerAttendance(request) {
       throw createOperationalError('재직 상태인 직원만 출퇴근 등록이 가능합니다.', '', true);
     }
 
-    const operationalSettings = readOperationalSettings_();
-    if (operationalSettings.gps.enabled && (!Number.isFinite(input.gpsLatitude) || !Number.isFinite(input.gpsLongitude))) {
-      throw createOperationalError('현재 위치를 확인한 후 다시 시도해 주세요.', LOG_EVENTS.gpsFailed);
-    }
-
-    if (operationalSettings.gps.enabled) {
-      input.gpsDistanceM = getNearestGpsDistanceM_(input.gpsLatitude, input.gpsLongitude, operationalSettings.gps.locations);
-    }
-
-    if (operationalSettings.gps.enabled && input.gpsDistanceM > operationalSettings.gps.allowedRadiusM) {
-      throw createOperationalError('회사 반경 내에서만 출퇴근 등록이 가능합니다.', LOG_EVENTS.gpsFailed);
-    }
-
     const attendanceSheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
     let employeeBlock = findEmployeeBlockOrNull(attendanceSheet, employee.name);
 
@@ -237,7 +223,7 @@ function registerAttendance(request) {
       employeeBlock = findEmployeeBlock(attendanceSheet, employee.name);
     }
 
-    const savedAt = floorToHalfHour(input.actualAt);
+    const savedAt = new Date(input.actualAt);
     const workDate = new Date(savedAt);
     const targetRow = findOrCreateDateRow(attendanceSheet, workDate);
     const targetColumn = input.type === 'clockIn'
@@ -265,8 +251,6 @@ function registerAttendance(request) {
       type: input.type === 'clockIn' ? LOG_EVENTS.clockIn : LOG_EVENTS.clockOut,
       savedTime: formatTime(savedAt),
       actualTime: formatTime(input.actualAt),
-      gpsDistanceM: operationalSettings.gps.enabled ? input.gpsDistanceM : '',
-      gpsVerified: operationalSettings.gps.enabled ? 'Y' : 'OFF',
       device: input.device || 'LogiFlow PWA',
       registeredAt: new Date(),
       updatedAt: '',
@@ -286,10 +270,7 @@ function registerAttendance(request) {
       type: input.type,
       date: formatDate(workDate),
       savedTime: formatTime(savedAt),
-      actualTime: formatTime(input.actualAt),
-      gpsDistanceM: operationalSettings.gps.enabled ? input.gpsDistanceM : '',
-      gpsEnabled: operationalSettings.gps.enabled,
-      gpsAllowedRadiusM: operationalSettings.gps.allowedRadiusM
+      actualTime: formatTime(input.actualAt)
     };
   } catch (error) {
     if (ss && !error.skipOperationalLog) {
@@ -373,23 +354,13 @@ function buildEmployeeDashboard(ss, employee) {
     return row.date === todayText;
   })[0] || emptyAttendanceRow(todayText);
   const summary = summarizeAttendanceRows(rows);
-  const operationalSettings = readOperationalSettings_();
-
   return {
     employee,
     today,
     rows,
     summary,
     statistics: buildAttendanceStatistics(attendanceRows, rows, now),
-    gps: {
-      enabled: operationalSettings.gps.enabled,
-      site: '',
-      distanceM: null,
-      allowedRadiusM: operationalSettings.gps.allowedRadiusM,
-      locations: operationalSettings.gps.locations,
-      verified: !operationalSettings.gps.enabled
-    },
-    operationalSettings,
+    operationalSettings: readOperationalSettings_(),
     generatedAt: formatDateTime(new Date())
   };
 }
@@ -481,7 +452,6 @@ function getAdminDashboard(request) {
   const existingNames = getExistingEmployeeNamesFromHeader(attendanceValues[0] || []);
   const employeeBlocksByName = getEmployeeBlocksByNameFromValues(attendanceValues[0] || [], attendanceValues[1] || []);
   const todayRow = findDateRowValues(attendanceValues, todayText);
-  const lastLogsByEmployeeId = getLastLogsByEmployeeId(ss);
   const departments = Array.from(new Set(roster
     .map(function (employee) { return employee.department; })
     .filter(Boolean))).sort();
@@ -496,8 +466,6 @@ function getAdminDashboard(request) {
     .map(function (employee) {
       const block = employee.name ? employeeBlocksByName[employee.name] : null;
       const day = block && todayRow ? buildAttendanceRow(todayText, todayParsed ? todayParsed.day : '', todayRow, block) : emptyAttendanceRow(todayText);
-      const lastLog = employee.employeeId ? lastLogsByEmployeeId[employee.employeeId] : null;
-
       return {
         row: employee.row,
         department: employee.department,
@@ -510,7 +478,6 @@ function getAdminDashboard(request) {
         overtime: day.overtime,
         ot: day.ot,
         leaveUsed: day.leaveUsed,
-        gpsDistanceM: lastLog ? lastLog.gpsDistanceM : '',
         sheetsStatus: block ? '완료' : '대기'
       };
     });
@@ -692,14 +659,6 @@ function normalizeAttendanceRequest(request) {
   const employeeId = String(input.employeeId || '').trim();
   const password = String(input.password || '').trim();
   const actualAt = input.actualAt ? new Date(input.actualAt) : new Date();
-  const gpsText = input.gpsDistanceM === null || input.gpsDistanceM === undefined || input.gpsDistanceM === ''
-    ? ''
-    : String(input.gpsDistanceM).trim();
-  const gpsDistanceM = gpsText === '' ? null : Number(gpsText);
-  const latitudeText = input.gpsLatitude === null || input.gpsLatitude === undefined || input.gpsLatitude === '' ? '' : String(input.gpsLatitude).trim();
-  const longitudeText = input.gpsLongitude === null || input.gpsLongitude === undefined || input.gpsLongitude === '' ? '' : String(input.gpsLongitude).trim();
-  const gpsLatitude = latitudeText === '' ? null : Number(latitudeText);
-  const gpsLongitude = longitudeText === '' ? null : Number(longitudeText);
 
   if (!employeeId) {
     throw new Error('사번을 입력해 주세요.');
@@ -713,16 +672,8 @@ function normalizeAttendanceRequest(request) {
     throw new Error('등록 시간을 확인해 주세요.');
   }
 
-  if (gpsDistanceM !== null && !Number.isFinite(gpsDistanceM)) {
-    throw new Error('GPS 거리 정보를 확인해 주세요.');
-  }
-
-  if (gpsLatitude !== null && !Number.isFinite(gpsLatitude)) {
-    throw new Error('GPS 위도 정보를 확인해 주세요.');
-  }
-
-  if (gpsLongitude !== null && !Number.isFinite(gpsLongitude)) {
-    throw new Error('GPS 경도 정보를 확인해 주세요.');
+  if (actualAt.getTime() % (30 * 60 * 1000) !== 0) {
+    throw new Error('30분 단위 시간을 선택해 주세요.');
   }
 
   return {
@@ -730,26 +681,8 @@ function normalizeAttendanceRequest(request) {
     password,
     type,
     actualAt,
-    gpsDistanceM,
-    gpsLatitude,
-    gpsLongitude,
     device: String(input.device || '').trim()
   };
-}
-
-function getNearestGpsDistanceM_(latitude, longitude, locations) {
-  const distances = (locations || []).map(function (location) {
-    const earthRadiusM = 6371000;
-    const toRadians = function (value) { return value * Math.PI / 180; };
-    const latitudeDelta = toRadians(Number(location.latitude) - latitude);
-    const longitudeDelta = toRadians(Number(location.longitude) - longitude);
-    const a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
-      + Math.cos(toRadians(latitude)) * Math.cos(toRadians(Number(location.latitude)))
-      * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
-    return earthRadiusM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  });
-  if (!distances.length) throw new Error('등록된 사업장 위치가 없습니다.');
-  return Math.round(Math.min.apply(null, distances));
 }
 
 function readRosterEmployees(ss) {
@@ -1240,35 +1173,6 @@ function attendanceDateToTimestamp(value) {
   return parsed ? new Date(parsed.year, parsed.month - 1, parsed.day).getTime() : 0;
 }
 
-function getLastLogsByEmployeeId(ss) {
-  const sheet = getAttendanceLogSheet(ss);
-  const lastRow = sheet.getLastRow();
-  const logsByEmployeeId = {};
-
-  if (lastRow < 2) {
-    return logsByEmployeeId;
-  }
-
-  const values = sheet.getRange(2, 1, lastRow - 1, 12).getDisplayValues();
-
-  values.forEach(function (row) {
-    const employeeId = String(row[1] || '').trim();
-    if (!employeeId) {
-      return;
-    }
-
-    logsByEmployeeId[employeeId] = {
-      date: row[0],
-      type: row[3],
-      gpsDistanceM: row[6],
-      gpsVerified: row[7],
-      registeredAt: row[9]
-    };
-  });
-
-  return logsByEmployeeId;
-}
-
 function createOperationalError(message, eventType, skipOperationalLog) {
   const error = new Error(message);
   error.logEventType = eventType || '';
@@ -1291,20 +1195,13 @@ function appendOperationalFailure(ss, context) {
     const type = baseType === LOG_EVENTS.systemError && errorText
       ? baseType + ' - ' + errorText
       : baseType;
-    const hasGps = input.gpsDistanceM !== null && input.gpsDistanceM !== '' && Number.isFinite(Number(input.gpsDistanceM));
-    const operationalSettings = readOperationalSettings_();
-
     appendAttendanceLog(ss, {
       dateText: formatDate(actualAt),
       employeeId: String(details.employeeId || employee.employeeId || input.employeeId || '').trim(),
       name: String(employee.name || '').trim(),
       type,
-      savedTime: input.actualAt ? formatTime(floorToHalfHour(actualAt)) : '',
+      savedTime: input.actualAt ? formatTime(actualAt) : '',
       actualTime: formatTime(actualAt),
-      gpsDistanceM: hasGps ? Number(input.gpsDistanceM) : '',
-      gpsVerified: operationalSettings.gps.enabled
-        ? (hasGps ? (Number(input.gpsDistanceM) <= operationalSettings.gps.allowedRadiusM ? 'Y' : 'N') : 'N')
-        : 'OFF',
       device: String(details.device || input.device || 'LogiFlow PWA').trim(),
       registeredAt: new Date(),
       updatedAt: '',
@@ -1324,8 +1221,8 @@ function appendAttendanceLog(ss, entry) {
     entry.type,
     entry.savedTime,
     entry.actualTime,
-    entry.gpsDistanceM,
-    entry.gpsVerified,
+    '',
+    '',
     entry.device,
     formatDateTime(entry.registeredAt),
     entry.updatedAt,
@@ -1346,3 +1243,4 @@ function getRequiredSheet(ss, sheetName) {
 
   return sheet;
 }
+

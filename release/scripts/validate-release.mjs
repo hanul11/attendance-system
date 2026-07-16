@@ -55,6 +55,9 @@ const capacitor = readJson("mobile/capacitor.config.json");
 const appConfig = read("firebase/public/config/app-config.js");
 const firebaseConfig = read("firebase/public/config/firebase-config.js");
 const appHtml = read("apps-script/Index.html");
+const serverSource = ["Config.gs", "OperationalSettings.gs", "Code.gs"]
+  .map((fileName) => read(`apps-script/${fileName}`))
+  .join("\n");
 
 assertEqual("App package ID", config.app.bundleId, capacitor.appId, "mobile/capacitor.config.json");
 assertEqual("Mobile package version", config.app.version, mobilePackage.version, "mobile/package.json");
@@ -110,11 +113,11 @@ const iconCandidates = [
 ];
 add(iconCandidates.some(exists) ? "pass" : "block", "App icon source", iconCandidates.some(exists) ? "A release icon source exists." : "Add release icon sources under mobile/resources.");
 
-const gpsConstant = findValue(appHtml, /const VERIFIED_GPS_DISTANCE_M\s*=\s*([^;]+);/);
-if (gpsConstant && /^\d+(?:\.\d+)?$/.test(gpsConstant.trim())) {
-  add("block", "GPS production data", `Fixed GPS distance (${gpsConstant.trim()}m) is present in apps-script/Index.html.`);
+const activeGpsPattern = /navigator\.geolocation|gpsDistanceM|gpsVerified|gpsLatitude|gpsLongitude|gpsLocations|LOGIFLOW_GPS_/i;
+if (activeGpsPattern.test(appHtml + serverSource)) {
+  add("block", "GPS-free attendance", "Active GPS code remains in the production attendance source.");
 } else {
-  add("pass", "GPS production data", "No fixed GPS distance constant was detected.");
+  add("pass", "GPS-free attendance", "No active GPS permission, request, storage or configuration code was detected.");
 }
 
 const levels = { pass: "PASS", warn: "WARN", block: "BLOCK" };
@@ -125,3 +128,4 @@ const blockers = checks.filter((check) => check.level === "block");
 console.log("=".repeat(72));
 console.log(blockers.length ? `Release blocked: ${blockers.length} item(s)` : "Release configuration ready");
 if (strict && blockers.length) process.exitCode = 1;
+

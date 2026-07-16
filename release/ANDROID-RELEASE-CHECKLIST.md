@@ -1,34 +1,41 @@
-# LOGIFLOW Android 諛고룷 泥댄겕由ъ뒪??
-## Google Play 以鍮?
-- [ ] Google Play Console 媛쒕컻??怨꾩젙 以鍮?- [ ] ?⑦궎吏紐?`kr.co.hanul.logiflow`濡????앹꽦
-- [ ] ?대? ?뚯뒪???몃옓怨??뚯뒪??紐⑸줉 援ъ꽦
-- [ ] Play App Signing ?쒖꽦??
-## Firebase 以鍮?
-- [ ] Firebase??Android ???깅줉
-- [ ] `google-services.json`??`mobile/android/app/`??異붽?
-- [ ] Firebase Authentication, Messaging, Firestore ?ъ슜 ?щ? ?뺤젙
+# LOGIFLOW Android 배포 체크리스트
 
-## Android ?꾨줈?앺듃
+## Google Play 준비
+
+- [ ] Google Play Console 개발자 계정 준비
+- [ ] 패키지명 `kr.co.hanul.logiflow`로 앱 생성
+- [ ] 내부 테스트 트랙과 테스터 목록 구성
+- [ ] Play App Signing 활성화
+
+## Firebase 준비
+
+- [ ] Firebase에 Android 앱 등록
+- [ ] `google-services.json`을 `mobile/android/app/`에 추가
+- [ ] Firebase Authentication, Messaging, Firestore 사용 여부 확정
+
+## Android 프로젝트
 
 - [ ] `cd mobile && npm install`
 - [ ] `npm run add:android`
 - [ ] `npm run sync:android`
 - [ ] `npm run open:android`
-- [ ] 512x512 Play Store ?꾩씠肄섍낵 Adaptive Icon 以鍮?- [ ] ???쒖떆紐? Splash Screen, ?꾩튂 沅뚰븳 ?뺤씤
+- [ ] 512x512 Play Store 아이콘과 Adaptive Icon 준비
+- [ ] 앱 표시명과 Splash Screen 확인
 
-## ?쒕챸怨??곗텧臾?
-- [ ] Upload Key? Keystore ?앹꽦
-- [ ] `release/android/keystore.properties.example`??李멸퀬??濡쒖뺄 ?ㅼ젙 ?앹꽦
-- [ ] Keystore? 鍮꾨?踰덊샇媛 GitHub???ы븿?섏? ?딆븯?붿? ?뺤씤
-- [ ] ?대? 吏곸젒 ?ㅼ튂???쒕챸 APK ?앹꽦
-- [ ] Google Play ?대? ?뚯뒪?몄슜 ?쒕챸 AAB ?앹꽦
-- [ ] ??諛고룷留덈떎 Version Code 利앷?
+## 서명과 산출물
 
-## ?댁쁺 ?뺤씤
+- [ ] Upload Key와 Keystore 생성
+- [ ] `release/android/keystore.properties.example`을 참고해 로컬 설정 생성
+- [ ] Keystore와 비밀번호가 GitHub에 포함되지 않았는지 확인
+- [ ] 내부 직접 설치용 서명 APK 생성
+- [ ] Google Play 내부 테스트용 서명 AAB 생성
+- [ ] 새 배포마다 Version Code 증가
 
-- [ ] 怨좎젙 GPS 嫄곕━媛믪쓣 ?ㅼ젣 ?꾩튂 痢≪젙媛믪쑝濡?援먯껜
-- [ ] ?ㅼ젣 湲곌린?먯꽌 濡쒓렇?? ?먮룞 濡쒓렇?? GPS, 異쒓렐, ?닿렐 ?뺤씤
-- [ ] 洹쇳깭쨌?듦퀎쨌愿由ъ옄쨌怨듭??ы빆쨌?ㅼ젙 ?뺤씤
-- [ ] Google Sheets `洹쇳깭?꾪솴` ????뺤씤
-- [ ] `npm run qa:static` ?듦낵
-- [ ] `npm run release:check:android:strict` ?듦낵
+## 운영 확인
+
+- [ ] 실제 기기에서 로그인, 자동 로그인, 출근, 퇴근 확인
+- [ ] 근태·통계·관리자·공지사항·설정 확인
+- [ ] Google Sheets `근태현황` 저장 확인
+- [ ] `npm run qa:static` 통과
+- [ ] `npm run release:check:android:strict` 통과
+

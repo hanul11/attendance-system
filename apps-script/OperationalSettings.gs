@@ -1,6 +1,4 @@
 var OPERATIONAL_PROPERTY_KEYS = Object.freeze({
-  gpsEnabled: 'LOGIFLOW_GPS_ENABLED',
-  gpsAllowedRadiusM: 'LOGIFLOW_GPS_ALLOWED_RADIUS_M',
   checkinNoticeEnabled: 'LOGIFLOW_CHECKIN_NOTICE_ENABLED',
   checkoutNoticeEnabled: 'LOGIFLOW_CHECKOUT_NOTICE_ENABLED',
   checkinReminderEnabled: 'LOGIFLOW_CHECKIN_REMINDER_ENABLED',
@@ -11,11 +9,7 @@ var OPERATIONAL_PROPERTY_KEYS = Object.freeze({
   checkoutReminderTime: 'LOGIFLOW_CHECKOUT_REMINDER_TIME'
 });
 
-var ALLOWED_GPS_RADII = Object.freeze([30, 50, 100, 150, 200]);
-
 var OPERATIONAL_DEFAULTS = Object.freeze({
-  gpsEnabled: true,
-  gpsAllowedRadiusM: 50,
   checkinNoticeEnabled: true,
   checkoutNoticeEnabled: true,
   checkinReminderEnabled: true,
@@ -37,16 +31,9 @@ function saveOperationalSettings(request) {
     throw new Error('\uAD00\uB9AC\uC790 \uACC4\uC815\uC5D0\uC11C\uB9CC \uC6B4\uC601 \uC124\uC815\uC744 \uBCC0\uACBD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
   }
 
-  const gps = input.gps || {};
   const notifications = input.notifications || {};
-  const radius = Number(gps.allowedRadiusM);
-  if (ALLOWED_GPS_RADII.indexOf(radius) === -1) {
-    throw new Error('GPS \uD5C8\uC6A9 \uBC18\uACBD\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.');
-  }
 
   const values = {};
-  values[OPERATIONAL_PROPERTY_KEYS.gpsEnabled] = String(normalizeRequestBoolean_(gps.enabled));
-  values[OPERATIONAL_PROPERTY_KEYS.gpsAllowedRadiusM] = String(radius);
   values[OPERATIONAL_PROPERTY_KEYS.checkinNoticeEnabled] = String(normalizeRequestBoolean_(notifications.checkinNoticeEnabled));
   values[OPERATIONAL_PROPERTY_KEYS.checkoutNoticeEnabled] = String(normalizeRequestBoolean_(notifications.checkoutNoticeEnabled));
   values[OPERATIONAL_PROPERTY_KEYS.checkinReminderEnabled] = String(normalizeRequestBoolean_(notifications.checkinReminderEnabled));
@@ -68,22 +55,7 @@ function readOperationalSettings_() {
     scriptProperties.setProperties(missingDefaults, false);
     Object.assign(values, missingDefaults);
   }
-  const radius = Number(values[OPERATIONAL_PROPERTY_KEYS.gpsAllowedRadiusM]);
-
   return {
-    gps: {
-      enabled: readBooleanProperty_(values, OPERATIONAL_PROPERTY_KEYS.gpsEnabled, OPERATIONAL_DEFAULTS.gpsEnabled),
-      allowedRadiusM: ALLOWED_GPS_RADII.indexOf(radius) >= 0 ? radius : OPERATIONAL_DEFAULTS.gpsAllowedRadiusM,
-      allowedRadii: ALLOWED_GPS_RADII.slice(),
-      locations: CONFIG.gpsLocations.map(function (location) {
-        return {
-          id: location.id,
-          name: location.name,
-          latitude: location.latitude,
-          longitude: location.longitude
-        };
-      })
-    },
     notifications: {
       checkinNoticeEnabled: readBooleanProperty_(values, OPERATIONAL_PROPERTY_KEYS.checkinNoticeEnabled, OPERATIONAL_DEFAULTS.checkinNoticeEnabled),
       checkoutNoticeEnabled: readBooleanProperty_(values, OPERATIONAL_PROPERTY_KEYS.checkoutNoticeEnabled, OPERATIONAL_DEFAULTS.checkoutNoticeEnabled),
@@ -121,3 +93,4 @@ function normalizeOperationalTime_(value, fallback) {
   const text = String(value || '').trim();
   return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(text) ? text : fallback;
 }
+

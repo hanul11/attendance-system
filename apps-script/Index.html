@@ -336,35 +336,13 @@
     .panel h2 { margin: 0; font-size: 17px; font-weight: 600; }
     .panel p { margin: 5px 0 0; color: var(--muted); font-size: 13px; font-weight: 500; line-height: 1.45; }
 
-    .gps {
-      display: grid;
-      grid-template-columns: 44px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 12px;
-      padding: 13px;
-      border: 1px solid rgba(22, 163, 74, .22);
-      border-radius: var(--radius);
-      background: rgba(22, 163, 74, .07);
-    }
-
-    .gps.warn {
-      border-color: rgba(217, 119, 6, .24);
-      background: rgba(217, 119, 6, .07);
-    }
-
-    .pin, .time {
+    .time {
       display: grid;
       place-items: center;
       border-radius: var(--radius);
       background: #fff;
       box-shadow: var(--shadow-soft);
     }
-
-    .pin { width: 44px; height: 44px; color: var(--green); }
-    .gps.warn .pin { color: var(--amber); }
-    .gps strong { display: block; font-size: 14px; }
-    .gps span { display: block; margin-top: 4px; color: #087136; font-size: 13px; }
-    .gps.warn span { color: #98550d; }
 
     .pill, .tag {
       display: inline-flex;
@@ -674,7 +652,7 @@
       #employee { width: auto; margin-inline: 6px; }
       .home-hero { gap: 16px; }
       .home-greeting { padding-top: 4px; }
-      .home-status-copy, .home-status-row #gpsSite { display: none; }
+      .home-status-copy { display: none; }
       .clock { min-height: 82px; }
       .home-section { margin-top: 22px; }
       .home-section-head { margin-bottom: 10px; }
@@ -1412,11 +1390,7 @@
     .operations-row + .operations-row { border-top: 1px solid var(--line); }
     .operations-copy strong { display: block; font-size: 13px; font-weight: 650; }
     .operations-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.4; }
-    .operations-select { width: 120px; min-height: 44px; }
     .operations-time { width: 112px; min-height: 44px; text-align: center; font-variant-numeric: tabular-nums; }
-    .operations-location-list { display: grid; gap: 10px; padding: 18px; border-top: 1px solid var(--line); background: #fafbfc; }
-    .operations-location { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; }
-    .operations-location strong { color: var(--text); font-size: 12px; }
     .operations-save { margin-top: 26px; }
     @media (max-width: 600px) {
       .profile-view { width: auto; margin-inline: 6px; }
@@ -1922,8 +1896,6 @@
             <p class="home-date-copy">오늘은 <strong><span class="app-date" id="employeeDate">-</span></strong></p>
             <div class="home-status-row">
               <span class="home-work-status" id="homeWorkStatus"><span id="workStatusValue">출근 전</span></span>
-              <span class="chip good" id="gpsChip"><span class="dot"></span><span id="gpsStatus">GPS 인증 완료</span></span>
-              <span class="chip" id="gpsSite">한울생약 제2공장 42m</span>
               <button class="btn hidden" id="adminModeBtn" type="button">관리자 모드</button>
             </div>
             <p class="home-status-copy" id="workStatusSummary">출근 버튼으로 오늘 근무를 시작하세요.</p>
@@ -1983,8 +1955,6 @@
         </section>
 
         <div class="hidden">
-          <div id="gpsPanel"><strong id="gpsPanelTitle"></strong><span id="gpsPanelText"></span><span id="gpsPanelState"></span></div>
-          <span id="workStatusGps"></span>
           <span id="workStatusFoot"></span>
           <span id="homeWeekWork">0:00</span>
           <span id="homeLeaveUsed">0</span>
@@ -2303,16 +2273,7 @@
 
       <section class="view" id="settings">
         <div class="operations-settings-view">
-          <header class="app-settings-header"><button class="app-settings-back" type="button" data-open-view="admin" aria-label="관리 화면으로 돌아가기"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span></button><div><h1>운영 설정</h1><p>전 직원에게 적용되는 GPS와 알림 기본값을 관리합니다.</p></div></header>
-
-          <section class="app-settings-section" aria-labelledby="operationsGpsTitle">
-            <h2 id="operationsGpsTitle">GPS 설정</h2>
-            <div class="operations-card">
-              <div class="operations-row"><span class="operations-copy"><strong>GPS 사용</strong><span>출퇴근 등록 시 회사 반경을 확인합니다.</span></span><label class="profile-switch" aria-label="GPS 사용"><input id="opsGpsEnabled" type="checkbox" checked><span></span></label></div>
-              <div class="operations-row"><label class="operations-copy" for="opsGpsRadius"><strong>GPS 허용 반경</strong><span>기본값은 50m입니다.</span></label><select class="input operations-select" id="opsGpsRadius"><option value="30">30m</option><option value="50">50m</option><option value="100">100m</option><option value="150">150m</option><option value="200">200m</option></select></div>
-              <div class="operations-location-list" id="opsLocations"><div class="operations-location"><strong>사업장 위치</strong><span>설정을 불러오는 중입니다.</span></div></div>
-            </div>
-          </section>
+          <header class="app-settings-header"><button class="app-settings-back" type="button" data-open-view="admin" aria-label="관리 화면으로 돌아가기"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span></button><div><h1>운영 설정</h1><p>전 직원에게 적용되는 알림 기본값을 관리합니다.</p></div></header>
 
           <section class="app-settings-section" aria-labelledby="operationsNoticeTitle">
             <h2 id="operationsNoticeTitle">알림</h2>
@@ -2401,7 +2362,6 @@
       employee: null,
       admin: null,
       operationalSettings: null,
-      gpsRequestId: 0,
       adminMode: false,
       loadingFreshData: false,
       loginSaving: false,
@@ -2821,12 +2781,6 @@
         return;
       }
       if (state.attendanceSaving) return;
-      if (state.employee?.gps?.enabled !== false && state.employee?.gps?.verified !== true) {
-        showToast("GPS 확인 필요", "회사 반경 내 위치가 확인된 후 등록할 수 있습니다.", "error");
-        refreshGpsVerification();
-        return;
-      }
-
       const now = new Date();
       const choices = buildAttendanceTimeChoices(now);
       state.attendanceTimeType = type;
@@ -3011,7 +2965,6 @@
       state.employee = null;
       state.admin = null;
       state.operationalSettings = null;
-      state.gpsRequestId += 1;
       state.adminMode = false;
       clearSession();
       $("loginEmployeeId").value = "";
@@ -3109,9 +3062,6 @@
       if (/permission|authorization|not authorized|access denied|권한/.test(value)) {
         return "앱 사용 권한을 확인할 수 없습니다. 관리자에게 문의해 주세요.";
       }
-      if (/gps|geolocation|location service|위치 정보|위치 권한/.test(value)) {
-        return "위치 정보를 확인하지 못했습니다. GPS와 위치 권한을 확인해 주세요.";
-      }
       if (/spreadsheet|google sheets|sheet|시트/.test(value)) {
         return "근태 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
       }
@@ -3180,13 +3130,12 @@
       const today = state.employee?.today || {};
       const clockInDone = Boolean(today.clockIn);
       const clockOutDone = Boolean(today.clockOut);
-      const gpsVerified = state.employee?.gps?.verified !== false;
-      $("clockInBtn").disabled = clockInDone || !gpsVerified;
-      $("clockOutBtn").disabled = !clockInDone || clockOutDone || !gpsVerified;
+      $("clockInBtn").disabled = clockInDone;
+      $("clockOutBtn").disabled = !clockInDone || clockOutDone;
       $("clockInBtn").classList.toggle("done", clockInDone);
       $("clockOutBtn").classList.toggle("done", clockOutDone);
-      $("clockInBtn").setAttribute("aria-disabled", String(clockInDone || !gpsVerified));
-      $("clockOutBtn").setAttribute("aria-disabled", String(!clockInDone || clockOutDone || !gpsVerified));
+      $("clockInBtn").setAttribute("aria-disabled", String(clockInDone));
+      $("clockOutBtn").setAttribute("aria-disabled", String(!clockInDone || clockOutDone));
       $("clockInBtnLabel").textContent = clockInDone ? "출근 완료" : "출근하기";
       $("clockOutBtnLabel").textContent = clockOutDone ? "퇴근 완료" : "퇴근하기";
       $("clockInBtnTime").textContent = clockInDone ? dash(today.clockIn) : "미등록";
@@ -3233,124 +3182,19 @@
       setText("profileAutoLoginStatus", autoLoginEnabled ? "사용 중" : "이번 실행만");
       setText("profileFirstLoginStatus", requiresInitialSetup ? "설정 필요" : "설정 완료");
       $("adminModeBtn").classList.add("hidden");
-      const gps = Object.assign({}, payload.gps || {}, {
-        enabled: state.operationalSettings?.gps?.enabled !== false,
-        allowedRadiusM: state.operationalSettings?.gps?.allowedRadiusM || payload.gps?.allowedRadiusM || 50,
-        locations: state.operationalSettings?.gps?.locations || payload.gps?.locations || []
-      });
-      payload.gps = gps;
-      applyGpsState(gps);
-      applyWorkStatus(today, gps);
+      applyWorkStatus(today);
       seedCurrentStats(payload);
       renderHomeRecent(payload.rows || []);
       renderHistory(payload.rows || []);
       updateLiveClock();
       updateAttendanceButtons();
-      refreshGpsVerification();
     }
 
-    function applyGpsState(gps) {
-      const enabled = gps.enabled !== false;
-      const verified = !enabled || gps.verified === true;
-      const site = enabled ? (gps.site || "사업장 위치 확인 중") : "GPS 미사용";
-      const distance = gps.distanceM === null || gps.distanceM === undefined || gps.distanceM === "" ? NaN : Number(gps.distanceM);
-      const distanceText = Number.isFinite(distance) ? distance + "m" : "-";
-      const radius = gps.allowedRadiusM || 50;
-
-      $("gpsSite").textContent = enabled ? site + " " + distanceText : site;
-      $("gpsChip").className = "chip " + (verified ? "good" : "warn");
-      $("gpsStatus").textContent = !enabled ? "GPS 미사용" : verified ? "GPS 인증 완료" : "GPS 확인 필요";
-      $("gpsPanel").classList.toggle("warn", !verified);
-      $("gpsPanelTitle").textContent = !enabled ? "GPS 인증을 사용하지 않습니다" : verified ? "회사 반경 내 인증 완료" : "회사 반경 밖 또는 GPS 확인 필요";
-      $("gpsPanelText").textContent = enabled ? site + " · 허용 반경 " + radius + "m" : "관리자 운영 설정에 따라 위치 확인이 생략됩니다.";
-      $("gpsPanelState").textContent = !enabled ? "미사용" : verified ? "활성" : "대기";
-      $("gpsPanelState").className = "pill" + (verified ? "" : " warn");
-      $("workStatusGps").textContent = !enabled ? "GPS 미사용" : (verified ? "회사 반경 내" : "GPS 확인 필요") + " · " + distanceText;
-    }
-
-    function calculateGpsDistanceMeters(latitude1, longitude1, latitude2, longitude2) {
-      const toRadians = (value) => value * Math.PI / 180;
-      const earthRadiusM = 6371000;
-      const latitudeDelta = toRadians(latitude2 - latitude1);
-      const longitudeDelta = toRadians(longitude2 - longitude1);
-      const a = Math.sin(latitudeDelta / 2) ** 2
-        + Math.cos(toRadians(latitude1)) * Math.cos(toRadians(latitude2)) * Math.sin(longitudeDelta / 2) ** 2;
-      return earthRadiusM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function getNearestGpsLocation(position, locations) {
-      return (locations || []).map((location) => ({
-        location,
-        distanceM: calculateGpsDistanceMeters(
-          position.coords.latitude,
-          position.coords.longitude,
-          Number(location.latitude),
-          Number(location.longitude)
-        )
-      })).sort((left, right) => left.distanceM - right.distanceM)[0] || null;
-    }
-
-    function refreshGpsVerification() {
-      if (!state.employee?.gps) return;
-      const gps = state.employee.gps;
-      const requestId = ++state.gpsRequestId;
-
-      if (gps.enabled === false) {
-        gps.verified = true;
-        gps.distanceM = null;
-        applyGpsState(gps);
-        applyWorkStatus(state.employee.today || {}, gps);
-        updateAttendanceButtons();
-        return;
-      }
-
-      gps.verified = false;
-      gps.site = "사업장 위치 확인 중";
-      gps.distanceM = null;
-      applyGpsState(gps);
-      updateAttendanceButtons();
-
-      if (!navigator.geolocation || !(gps.locations || []).length) {
-        gps.site = "위치 정보를 사용할 수 없음";
-        applyGpsState(gps);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition((position) => {
-        if (requestId !== state.gpsRequestId || !state.employee?.gps) return;
-        const nearest = getNearestGpsLocation(position, gps.locations);
-        if (!nearest) return;
-        gps.site = nearest.location.name;
-        gps.distanceM = Math.round(nearest.distanceM);
-        gps.latitude = position.coords.latitude;
-        gps.longitude = position.coords.longitude;
-        gps.accuracyM = Math.round(Number(position.coords.accuracy) || 0);
-        gps.verified = nearest.distanceM <= Number(gps.allowedRadiusM || 50);
-        applyGpsState(gps);
-        applyWorkStatus(state.employee.today || {}, gps);
-        updateAttendanceButtons();
-      }, (error) => {
-        if (requestId !== state.gpsRequestId || !state.employee?.gps) return;
-        gps.site = error?.code === 1 ? "위치 권한이 필요합니다" : "현재 위치를 확인할 수 없습니다";
-        gps.distanceM = null;
-        gps.verified = false;
-        applyGpsState(gps);
-        applyWorkStatus(state.employee.today || {}, gps);
-        updateAttendanceButtons();
-      }, {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 30000
-      });
-    }
-
-    function applyWorkStatus(today, gps) {
+    function applyWorkStatus(today) {
       const clockInDone = Boolean(today.clockIn);
       const clockOutDone = Boolean(today.clockOut);
-      const gpsVerified = gps.verified !== false;
       $("clockInBtn").classList.toggle("done", clockInDone);
       $("clockOutBtn").classList.toggle("done", clockOutDone);
-      $("clockInBtn").classList.toggle("out", !gpsVerified);
       updateHomeStatus(today);
     }
 
@@ -3389,10 +3233,7 @@
       const operational = settings || state.operationalSettings;
       if (!operational) return;
       state.operationalSettings = operational;
-      const gps = operational.gps || {};
       const notifications = operational.notifications || {};
-      $("opsGpsEnabled").checked = gps.enabled !== false;
-      $("opsGpsRadius").value = String(gps.allowedRadiusM || 50);
       $("opsCheckinNoticeEnabled").checked = notifications.checkinNoticeEnabled !== false;
       $("opsCheckinReminderEnabled").checked = notifications.checkinReminderEnabled !== false;
       $("opsCheckoutNoticeEnabled").checked = notifications.checkoutNoticeEnabled !== false;
@@ -3401,9 +3242,6 @@
       $("opsCheckinReminderTime").value = notifications.checkinReminderTime || "09:00";
       $("opsCheckoutNoticeTime").value = notifications.checkoutNoticeTime || "18:00";
       $("opsCheckoutReminderTime").value = notifications.checkoutReminderTime || "20:00";
-      $("opsLocations").innerHTML = (gps.locations || []).map((location) => `
-        <div class="operations-location"><strong>${escapeHtml(location.name)}</strong><span>${Number(location.latitude).toFixed(6)}, ${Number(location.longitude).toFixed(6)}</span></div>
-      `).join("") || '<div class="operations-location"><strong>사업장 위치</strong><span>등록된 위치 없음</span></div>';
     }
 
     async function loadOperationalSettings() {
@@ -3427,10 +3265,6 @@
       try {
         const response = await callServer("saveOperationalSettings", {
           adminEmployeeId: state.user.employeeId,
-          gps: {
-            enabled: $("opsGpsEnabled").checked,
-            allowedRadiusM: Number($("opsGpsRadius").value)
-          },
           notifications: {
             checkinNoticeEnabled: $("opsCheckinNoticeEnabled").checked,
             checkinReminderEnabled: $("opsCheckinReminderEnabled").checked,
@@ -3445,8 +3279,6 @@
         renderOperationalSettings(response.settings);
         if (state.employee) {
           state.employee.operationalSettings = response.settings;
-          state.employee.gps = Object.assign({}, state.employee.gps || {}, response.settings.gps);
-          refreshGpsVerification();
           updateCachedEmployee(state.employee);
         }
         showToast("운영 설정 저장 완료", "새 설정은 직원이 앱을 다시 열거나 새로고침할 때 적용됩니다.");
@@ -4169,8 +4001,7 @@
         employee: state.user,
         today: {},
         rows: [],
-        summary: {},
-        gps: { enabled: false, verified: true, distanceM: null, allowedRadiusM: 50 }
+        summary: {}
       };
       const today = Object.assign({}, payload.today || {});
       const targetKey = response.type === "clockOut" ? "clockOut" : "clockIn";
@@ -4216,9 +4047,6 @@
           employeeId: state.user.employeeId,
           type,
           actualAt: selectedAt.toISOString(),
-          gpsDistanceM: state.employee?.gps?.enabled === false ? null : state.employee?.gps?.distanceM,
-          gpsLatitude: state.employee?.gps?.enabled === false ? null : state.employee?.gps?.latitude,
-          gpsLongitude: state.employee?.gps?.enabled === false ? null : state.employee?.gps?.longitude,
           device: DEFAULT_DEVICE_NAME
         });
         applyLocalAttendanceResponse(response);
@@ -4526,7 +4354,7 @@
     $("privacyPolicyBtn").addEventListener("click", () => showAppDialog({
       type: "info",
       title: "개인정보 처리 안내",
-      message: "LOGIFLOW는 사번, 이름, 부서, 근태기록 및 GPS 인증 정보 등 근태 운영에 필요한 정보만 사용합니다.\n\n데이터는 회사가 관리하는 Google Sheets에 저장되며, 업무상 권한이 있는 사용자만 조회할 수 있습니다. 자세한 사항은 관리자에게 문의해 주세요."
+      message: "LOGIFLOW는 사번, 이름, 부서 및 근태기록 등 근태 운영에 필요한 정보만 사용합니다.\n\n데이터는 회사가 관리하는 Google Sheets에 저장되며, 업무상 권한이 있는 사용자만 조회할 수 있습니다. 자세한 사항은 관리자에게 문의해 주세요."
     }));
     $("openSourceBtn").addEventListener("click", () => showAppDialog({
       type: "info",

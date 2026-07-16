@@ -122,6 +122,45 @@ try {
 }
 
 try {
+  const helperSource = html.match(/function ceilToHalfHour[\s\S]*?(?=\n    function formatAttendanceChoiceTime)/)?.[0] || "";
+  const buildChoices = new Function(helperSource + "; return buildAttendanceTimeChoices;")();
+  const choiceText = (date) => buildChoices(date).map((value) => `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`);
+  check("Attendance choices at 10:58", JSON.stringify(choiceText(new Date(2026, 6, 16, 10, 58))) === JSON.stringify(["10:30", "11:00", "11:30"]), "10:30 / 11:00 / 11:30");
+  check("Attendance choices at 18:12", JSON.stringify(choiceText(new Date(2026, 6, 16, 18, 12))) === JSON.stringify(["18:00", "18:30", "19:00"]), "18:00 / 18:30 / 19:00");
+  const midnightChoices = buildChoices(new Date(2026, 6, 16, 23, 58));
+  check("Attendance choices across midnight", midnightChoices[0].getDate() === 16 && midnightChoices[1].getDate() === 17 && midnightChoices[2].getDate() === 17, "23:30 / next day 00:00 / 00:30");
+} catch (error) {
+  check("Attendance time choice checks", false, error.message);
+}
+
+const activeGpsSource = [
+  read("apps-script/Code.gs"),
+  read("apps-script/Config.gs"),
+  read("apps-script/OperationalSettings.gs"),
+  html,
+  read("firebase/public/index.html")
+].join("\n");
+check("GPS-free active source", !/navigator\.geolocation|gpsDistanceM|gpsVerified|gpsLatitude|gpsLongitude|gpsLocations|LOGIFLOW_GPS_|allow=["']geolocation["']/i.test(activeGpsSource), "No active GPS permission, request, storage or configuration code");
+check("No attendance registration window", !/assertClockInRegistrationWindow|attendancePolicy|출근 등록 가능 시간이 아닙니다/.test(activeGpsSource), "Clock-in and clock-out available 24 hours");
+check("Selected attendance time persistence", !/floorToHalfHour\s*\(\s*input\.actualAt\s*\)/.test(read("apps-script/Code.gs")) && /const savedAt = new Date\(input\.actualAt\)/.test(read("apps-script/Code.gs")), "Server stores selected time without flooring");
+
+try {
+  const normalizeSource = read("apps-script/Code.gs").match(/function normalizeAttendanceRequest[\s\S]*?(?=\nfunction readRosterEmployees)/)?.[0] || "";
+  const normalize = new Function(normalizeSource + "; return normalizeAttendanceRequest;")();
+  const midnight = normalize({ employeeId: "2023068", type: "clockIn", actualAt: "2026-07-16T00:00:00+09:00" });
+  const late = normalize({ employeeId: "2023068", type: "clockOut", actualAt: "2026-07-16T23:30:00+09:00" });
+  let invalidMinuteRejected = false;
+  try {
+    normalize({ employeeId: "2023068", type: "clockIn", actualAt: "2026-07-16T10:31:00+09:00" });
+  } catch (error) {
+    invalidMinuteRejected = /30분/.test(error.message);
+  }
+  check("24-hour half-hour server policy", midnight.actualAt.getMinutes() === 0 && late.actualAt.getMinutes() === 30 && invalidMinuteRejected, "00:00 and 23:30 accepted; 10:31 rejected");
+} catch (error) {
+  check("24-hour half-hour server policy", false, error.message);
+}
+
+try {
   const properties = {};
   const scriptProperties = {
     getProperties: () => ({ ...properties }),
@@ -133,11 +172,10 @@ try {
       + "; return { getOperationalSettings, saveOperationalSettings };"
   )({ getScriptProperties: () => scriptProperties });
   const defaults = operational.getOperationalSettings();
-  check("Operational settings defaults", defaults.gps.enabled === true && defaults.gps.allowedRadiusM === 50, "GPS enabled, 50m radius");
+  check("Operational notification defaults", defaults.notifications.checkinNoticeEnabled === true && defaults.notifications.checkoutNoticeEnabled === true, "Check-in and checkout notifications enabled");
   check("Operational settings storage isolation", !/SpreadsheetApp|getRange|getValues|getDisplayValues/.test(read("apps-script/OperationalSettings.gs")), "Script Properties only");
   const saved = operational.saveOperationalSettings({
     adminEmployeeId: "2023068",
-    gps: { enabled: false, allowedRadiusM: 100 },
     notifications: {
       checkinNoticeEnabled: true,
       checkinReminderEnabled: false,
@@ -149,10 +187,10 @@ try {
       checkoutReminderTime: "20:00"
     }
   });
-  check("Operational settings persistence", saved.settings.gps.enabled === false && saved.settings.gps.allowedRadiusM === 100, "Saved with Script Properties mock");
+  check("Operational settings persistence", saved.settings.notifications.checkinReminderEnabled === false && saved.settings.notifications.checkoutReminderEnabled === false, "Notification settings saved with Script Properties mock");
   let unauthorizedRejected = false;
   try {
-    operational.saveOperationalSettings({ adminEmployeeId: "1000001", gps: { enabled: true, allowedRadiusM: 50 }, notifications: {} });
+    operational.saveOperationalSettings({ adminEmployeeId: "1000001", notifications: {} });
   } catch (error) {
     unauthorizedRejected = /관리자/.test(error.message);
   }
@@ -161,18 +199,8 @@ try {
   check("Operational settings checks", false, error.message);
 }
 
-try {
-  const gpsDistance = new Function(read("apps-script/Code.gs") + "; return getNearestGpsDistanceM_;")();
-  const distance = gpsDistance(37.863368698405246, 126.81681274938418, [{
-    latitude: 37.863368698405246,
-    longitude: 126.81681274938418
-  }]);
-  check("Server GPS distance calculation", distance === 0, "Factory coordinate -> 0m");
-} catch (error) {
-  check("Server GPS distance calculation", false, error.message);
-}
-
 for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail}`);
 for (const result of failures) console.error(`[FAIL] ${result.name}: ${result.detail}`);
 console.log(`${passes.length} passed, ${failures.length} failed`);
 if (failures.length) process.exitCode = 1;
+
