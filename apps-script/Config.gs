@@ -29,20 +29,6 @@ var CONFIG = Object.freeze({
   noticeSheetName: SHEET_NAMES.notice,
   passwordResetSheetName: SHEET_NAMES.passwordReset,
   adminEmployeeId: '2023068',
-  timezone: 'Asia/Seoul',
-  gpsLocations: Object.freeze([
-    Object.freeze({
-      id: 'factory1',
-      name: '\uD55C\uC6B8\uC0DD\uC57D \uC81C1\uACF5\uC7A5',
-      latitude: 37.863368698405246,
-      longitude: 126.81681274938418
-    }),
-    Object.freeze({
-      id: 'factory2',
-      name: '\uD55C\uC6B8\uC0DD\uC57D \uC81C2\uACF5\uC7A5',
-      latitude: 37.863368698405246,
-      longitude: 126.810143420494
-    })
-  ])
+  timezone: 'Asia/Seoul'
 });
 
