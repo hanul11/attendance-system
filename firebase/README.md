@@ -1,6 +1,6 @@
 # 한울 출퇴근 기록 PWA
 
-이 폴더는 기존 Google Apps Script 근태 앱을 Android와 iPhone에서 홈 화면에 설치할 수 있도록 제공하는 Firebase Hosting용 PWA 셸입니다. 로그인, GPS, 출퇴근 저장 및 Google Sheets 연동은 기존 Apps Script 앱이 계속 담당합니다.
+이 폴더는 기존 Google Apps Script 근태 앱을 Android와 iPhone에서 홈 화면에 설치할 수 있도록 제공하는 Firebase Hosting용 PWA 셸입니다. 로그인, 출퇴근 저장 및 Google Sheets 연동은 기존 Apps Script 앱이 계속 담당합니다.
 
 ## 구성
 
@@ -18,7 +18,7 @@ firebase/
   firestore.rules            Firestore 기본 규칙
 ```
 
-Service Worker는 같은 출처의 PWA 정적 파일만 캐시합니다. Apps Script iframe, Google Sheets 데이터, 로그인 정보, GPS 및 출퇴근 요청은 오프라인 캐시에 저장하지 않습니다.
+Service Worker는 같은 출처의 PWA 정적 파일만 캐시합니다. Apps Script iframe, Google Sheets 데이터, 로그인 정보 및 출퇴근 요청은 오프라인 캐시에 저장하지 않습니다.
 
 ## Android 설치
 
@@ -48,3 +48,4 @@ firebase deploy --only hosting
 ```
 
 현재 단계에서는 실제 Firebase 프로젝트 연결과 Hosting 배포를 수행하지 않습니다.
+
