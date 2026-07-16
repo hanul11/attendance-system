@@ -1,48 +1,54 @@
-# LOGIFLOW TestFlight 泥댄겕由ъ뒪??
-## 1. Apple 以鍮?
-- [ ] Apple Developer Program 怨꾩젙 以鍮?- [ ] App Store Connect?먯꽌 LOGIFLOW ???앹꽦
-- [ ] Bundle ID瑜?`kr.co.hanul.logiflow`濡??깅줉
-- [ ] `release/release-config.json`??Team ID? App Store Connect App ID ?낅젰
-- [ ] ?대? ?뚯뒪??洹몃９怨??뚯뒪???대떦???깅줉
+# LOGIFLOW TestFlight 체크리스트
 
-## 2. Firebase 以鍮?
-- [ ] Firebase ?꾨줈?앺듃 ?앹꽦
-- [ ] Firebase Hosting 諛고룷 URL ?뺤젙
-- [ ] iOS ?깆쓣 Bundle ID `kr.co.hanul.logiflow`濡??깅줉
-- [ ] `GoogleService-Info.plist`瑜?`mobile/ios/App/App/`??異붽?
-- [ ] APNs ?몄쬆 ?ㅻ? Firebase Cloud Messaging???깅줉
-- [ ] Firebase ?ㅼ젙 Placeholder瑜??ㅼ젣 媛믪쑝濡?援먯껜?섍퀬 ?쒖꽦??
-## 3. ???먯궛
+## 1. Apple 준비
 
-- [ ] ?щ챸 ?щ갚??怨쇳븯吏 ?딆? 1024x1024 PNG ???꾩씠肄?以鍮?- [ ] iPhone Splash Screen ?뺤씤
-- [ ] ???대쫫 LOGIFLOW? ?쒓? ?쒖떆紐??뺤씤
+- [ ] Apple Developer Program 계정 준비
+- [ ] App Store Connect에서 LOGIFLOW 앱 생성
+- [ ] Bundle ID를 `kr.co.hanul.logiflow`로 등록
+- [ ] `release/release-config.json`에 Team ID와 App Store Connect App ID 입력
+- [ ] 내부 테스터 그룹과 테스트 담당자 등록
+
+## 2. Firebase 준비
+
+- [ ] Firebase 프로젝트 생성
+- [ ] Firebase Hosting 배포 URL 확정
+- [ ] iOS 앱을 Bundle ID `kr.co.hanul.logiflow`로 등록
+- [ ] `GoogleService-Info.plist`를 `mobile/ios/App/App/`에 추가
+- [ ] APNs 인증 키를 Firebase Cloud Messaging에 등록
+- [ ] Firebase 설정 Placeholder를 실제 값으로 교체하고 활성화
+
+## 3. 앱 자산
+
+- [ ] 투명 여백이 과하지 않은 1024x1024 PNG 앱 아이콘 준비
+- [ ] iPhone Splash Screen 확인
+- [ ] 앱 이름 LOGIFLOW와 한글 표시명 확인
 
 ## 4. macOS / Xcode
 
-- [ ] Node.js? Xcode ?ㅼ튂
+- [ ] Node.js와 Xcode 설치
 - [ ] `cd mobile && npm install`
 - [ ] `npm run add:ios`
 - [ ] `npm run sync:ios`
 - [ ] `npm run open:ios`
-- [ ] Signing Team怨?Automatic Signing ?ㅼ젙
-- [ ] Push Notifications capability 異붽?
-- [ ] Background Modes??Remote notifications ?쒖꽦??- [ ] ?꾩튂 沅뚰븳 ?ㅻ챸??Info.plist??異붽?
-- [ ] ?ㅼ젣 湲곌린?먯꽌 濡쒓렇?? GPS, 異쒓렐, ?닿렐 ?뺤씤
+- [ ] Signing Team과 Automatic Signing 설정
+- [ ] Push Notifications capability 추가
+- [ ] Background Modes의 Remote notifications 활성화
+- [ ] 실제 기기에서 로그인, 출근, 퇴근 확인
 
-## 5. ?댁쁺 ?뺤씤
+## 5. 운영 확인
 
-- [ ] 怨좎젙 GPS 嫄곕━媛믪쓣 ?ㅼ젣 ?꾩튂 痢≪젙媛믪쑝濡?援먯껜
-- [ ] ?댁쁺 Apps Script URL ?뺤씤
-- [ ] 洹쇳깭?꾪솴 ?쎄린/?곌린 ?뺤씤
-- [ ] 愿由ъ옄 怨꾩젙 `2023068` ?뺤씤
-- [ ] Firebase ?뚮┝ ?좏겙 ?깅줉怨??뚮┝ ON/OFF ?뺤씤
-- [ ] `npm run release:check:strict` ?듦낵
+- [ ] 운영 Apps Script URL 확인
+- [ ] 근태현황 읽기/쓰기 확인
+- [ ] 관리자 계정 `2023068` 확인
+- [ ] Firebase 알림 토큰 등록과 알림 ON/OFF 확인
+- [ ] `npm run release:check:strict` 통과
 
-## 6. TestFlight ?쒖텧
+## 6. TestFlight 제출
 
-- [ ] Version怨?Build Number 利앷? ?뺤씤
-- [ ] Xcode Archive ?앹꽦
-- [ ] App Store Connect ?낅줈??諛?泥섎━ ?꾨즺 ?뺤씤
-- [ ] ?섏텧 洹쒖젙, 媛쒖씤?뺣낫 泥섎━, ?뚯뒪???뺣낫 ?낅젰
-- [ ] ?대? ?뚯뒪?곗뿉寃?Build 諛고룷
-- [ ] ?ㅼ튂, ?먮룞 濡쒓렇?? 異쒗눜洹???? ?뚮┝ 吏꾩엯 理쒖쥌 ?뺤씤
+- [ ] Version과 Build Number 증가 확인
+- [ ] Xcode Archive 생성
+- [ ] App Store Connect 업로드 및 처리 완료 확인
+- [ ] 수출 규정, 개인정보 처리, 테스트 정보 입력
+- [ ] 내부 테스터에게 Build 배포
+- [ ] 설치, 자동 로그인, 출퇴근 저장, 알림 진입 최종 확인
+
