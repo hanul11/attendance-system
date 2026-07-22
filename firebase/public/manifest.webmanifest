@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "한울 출퇴근 기록",
-  "short_name": "한울 근태",
-  "description": "한울생약 임직원을 위한 출퇴근 기록 앱",
+  "name": "Hanul근태관리",
+  "short_name": "Hanul근태관리",
+  "description": "Hanul근태관리 출퇴근 기록 서비스",
   "lang": "ko-KR",
   "dir": "ltr",
   "start_url": "/?source=pwa",
