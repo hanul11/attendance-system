@@ -1007,6 +1007,27 @@
       font-weight: 650;
     }
     .attendance-request-btn:active { transform: scale(.985); }
+    .leave-candidate-notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 18px;
+      padding: 15px 17px;
+      border: 1px solid rgba(217, 119, 6, .18);
+      border-radius: 18px;
+      background: rgba(255, 251, 235, .84);
+    }
+    .leave-candidate-notice > div { min-width: 0; }
+    .leave-candidate-notice strong { display: block; font-size: 13px; font-weight: 650; }
+    .leave-candidate-notice span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .leave-candidate-notice button { min-height: 38px; flex: 0 0 auto; padding: 0 13px; border: 1px solid rgba(217, 119, 6, .22); border-radius: 12px; background: #fff; color: #8a4b08; font-size: 11px; font-weight: 650; }
+    .attendance-request-form { display: grid; gap: 13px; margin-top: 18px; }
+    .attendance-request-form label { margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .attendance-request-form textarea { min-height: 88px; resize: vertical; line-height: 1.5; }
+    .attendance-request-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+    .attendance-request-actions .btn { min-height: 48px; }
+    .attendance-state-badge.holiday::before, .attendance-legend i.holiday { background: #dc2626; }
 
     @media (max-width: 600px) {
       .attendance-view { width: auto; margin-inline: 6px; }
@@ -1029,6 +1050,7 @@
       .attendance-all-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; margin-bottom: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
       .attendance-all-row .attendance-all-date { grid-column: 1 / -1; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
       .attendance-all-row span[data-label]::before { display: block; margin-bottom: 5px; color: var(--faint); content: attr(data-label); font-size: 9px; font-weight: 400; }
+      .leave-candidate-notice { align-items: flex-start; }
     }
 
     .stats-view { width: 100%; max-width: 900px; margin: 0 auto; }
@@ -1915,6 +1937,11 @@
           </div>
         </div>
 
+        <aside class="leave-candidate-notice hidden" id="leaveCandidateNotice" aria-live="polite">
+          <div><strong>근태 확인이 필요합니다</strong><span id="leaveCandidateSummary">출퇴근 미등록 날짜를 확인해 주세요.</span></div>
+          <button id="leaveCandidateReviewBtn" type="button">확인하기</button>
+        </aside>
+
         <section class="home-section" aria-labelledby="todaySummaryTitle">
           <div class="home-section-head">
             <h2 id="todaySummaryTitle">오늘 근무</h2>
@@ -1989,6 +2016,7 @@
             <span><i class="early"></i>조출</span>
             <span><i class="overtime"></i>잔업</span>
             <span><i class="leave"></i>연차</span>
+            <span><i class="holiday"></i>공휴일</span>
             <span><i class="missing"></i>미등록</span>
           </div>
         </section>
@@ -2038,6 +2066,22 @@
               <div><span>잔업</span><strong id="detailOvertime">-</strong></div>
             </div>
             <button class="attendance-request-btn" id="attendanceEditRequestBtn" type="button"><span class="material-symbols-rounded" aria-hidden="true">edit_note</span>근태 수정 요청</button>
+          </div>
+        </div>
+
+        <div class="attendance-modal" id="attendanceRequestModal" role="dialog" aria-modal="true" aria-labelledby="attendanceRequestTitle" aria-hidden="true">
+          <div class="attendance-modal-card" role="document">
+            <div class="attendance-modal-head">
+              <div><span class="material-symbols-rounded" aria-hidden="true">edit_calendar</span><h2 id="attendanceRequestTitle">근태 수정 요청</h2></div>
+              <button id="attendanceRequestClose" type="button" aria-label="요청 닫기" title="닫기"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+            </div>
+            <p class="muted" id="attendanceRequestDate">-</p>
+            <div class="attendance-request-form">
+              <div><label for="attendanceRequestKind">요청 항목</label><select class="input" id="attendanceRequestKind"><option value="clockIn">출근</option><option value="clockOut">퇴근</option><option value="leave">연차</option></select></div>
+              <div id="attendanceRequestTimeField"><label for="attendanceRequestTime">요청 시간</label><input class="input" id="attendanceRequestTime" type="time" step="1800"></div>
+              <div><label for="attendanceRequestReason">요청 사유</label><textarea class="input" id="attendanceRequestReason" maxlength="120" placeholder="확인이 필요한 내용을 입력해 주세요."></textarea></div>
+              <div class="attendance-request-actions"><button class="btn" id="attendanceRequestCancel" type="button">취소</button><button class="btn primary" id="attendanceRequestSubmit" type="button">요청 등록</button></div>
+            </div>
           </div>
         </div>
       </section>
@@ -2368,6 +2412,8 @@
       attendanceSaving: false,
       attendanceTimeType: null,
       attendanceTriggerButton: null,
+      attendanceRequestDate: null,
+      attendanceRequestSaving: false,
       historyMonth: null,
       historyRows: [],
       historyCache: {},
@@ -3185,6 +3231,7 @@
       applyWorkStatus(today);
       seedCurrentStats(payload);
       renderHomeRecent(payload.rows || []);
+      renderLeaveCandidates(payload.leaveCandidates || []);
       renderHistory(payload.rows || []);
       updateLiveClock();
       updateAttendanceButtons();
@@ -3629,6 +3676,7 @@
 
     function getAttendanceDayState(row, date) {
       if (hasAttendanceValue(row?.leaveUsed)) return { key: "leave", label: "연차" };
+      if (row?.holidayName) return { key: "holiday", label: row.holidayName };
       if (hasAttendanceValue(row?.overtime)) return { key: "overtime", label: "잔업" };
       if (hasAttendanceValue(row?.early)) return { key: "early", label: "조출" };
       if (row?.clockIn) return { key: "normal", label: "정상" };
@@ -3711,6 +3759,89 @@
       setText("detailEarly", formatAttendanceDuration(row.early));
       setText("detailOvertime", formatAttendanceDuration(row.overtime));
       openAttendanceDetail();
+    }
+
+    function renderLeaveCandidates(candidates) {
+      const rows = Array.isArray(candidates) ? candidates : [];
+      const notice = $("leaveCandidateNotice");
+      notice.classList.toggle("hidden", !rows.length);
+      if (!rows.length) return;
+      const firstDate = rows[0].date;
+      setText("leaveCandidateSummary", dateDisplayText(firstDate) + (rows.length > 1 ? " 외 " + (rows.length - 1) + "건" : "") + "의 출퇴근 기록이 없습니다.");
+      $("leaveCandidateReviewBtn").dataset.requestDate = firstDate;
+    }
+
+    function dateDisplayText(value) {
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = dateDisplayHtml(value);
+      return wrapper.textContent || String(value || "-");
+    }
+
+    function getAttendanceRowByDate(dateText) {
+      return (state.historyRows || []).filter((row) => row.date === dateText)[0]
+        || (state.employee?.rows || []).filter((row) => row.date === dateText)[0]
+        || {};
+    }
+
+    function openAttendanceRequestDialog(dateValue, initialKind) {
+      const date = normalizeAppDate(dateValue);
+      if (!date) {
+        showToast("날짜 확인 필요", "수정 요청 날짜를 다시 선택해 주세요.", "error");
+        return;
+      }
+      const dateText = formatSheetDate(date);
+      const row = getAttendanceRowByDate(dateText);
+      const kind = initialKind || (!row.clockIn ? "clockIn" : !row.clockOut ? "clockOut" : "clockIn");
+      state.attendanceRequestDate = dateText;
+      setDateDisplay("attendanceRequestDate", date);
+      $("attendanceRequestKind").value = kind;
+      $("attendanceRequestTime").value = kind === "clockOut" ? (row.clockOut || "") : (row.clockIn || "");
+      $("attendanceRequestReason").value = kind === "leave" ? "출퇴근 미등록 연차 확인" : "";
+      syncAttendanceRequestFields();
+      closeAttendanceDetail();
+      const modal = $("attendanceRequestModal");
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      window.setTimeout(() => $("attendanceRequestKind").focus(), 40);
+    }
+
+    function syncAttendanceRequestFields() {
+      const isLeave = $("attendanceRequestKind").value === "leave";
+      $("attendanceRequestTimeField").classList.toggle("hidden", isLeave);
+      if (!isLeave && !$("attendanceRequestTime").value) {
+        $("attendanceRequestTime").value = formatAttendanceChoiceTime(ceilToHalfHour(new Date()));
+      }
+    }
+
+    function closeAttendanceRequestDialog() {
+      const modal = $("attendanceRequestModal");
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    async function submitAttendanceEditRequest(button) {
+      if (!state.user || state.attendanceRequestSaving) return;
+      const kind = $("attendanceRequestKind").value;
+      state.attendanceRequestSaving = true;
+      setBusy(button, true, '<span class="mini-loader" aria-hidden="true"></span><span>등록 중...</span>');
+      try {
+        await callServer("submitAttendanceCorrectionRequest", {
+          employeeId: state.user.employeeId,
+          targetDate: state.attendanceRequestDate,
+          kind,
+          requestedValue: kind === "leave" ? "1" : $("attendanceRequestTime").value,
+          reason: $("attendanceRequestReason").value,
+          device: DEFAULT_DEVICE_NAME
+        });
+        showToast("요청 등록 완료", "근태 수정 요청이 관리자와 근태 로그에 기록되었습니다.");
+        closeAttendanceRequestDialog();
+        await refreshEmployeeInBackground();
+      } catch (error) {
+        showAppDialog({ type: "error", title: "요청 등록 실패", message: getFriendlyError(error) });
+      } finally {
+        state.attendanceRequestSaving = false;
+        setBusy(button, false);
+      }
     }
 
     function renderAttendanceRecent(rows) {
@@ -4318,8 +4449,14 @@
     $("attendanceDetailModal").addEventListener("click", (event) => {
       if (event.target === event.currentTarget) closeAttendanceDetail();
     });
-    $("attendanceEditRequestBtn").addEventListener("click", () => {
-      showToast("근태 수정 요청", "선택한 날짜의 수정 요청은 관리자에게 문의해 주세요.");
+    $("attendanceEditRequestBtn").addEventListener("click", () => openAttendanceRequestDialog(state.selectedAttendanceDate));
+    $("leaveCandidateReviewBtn").addEventListener("click", (event) => openAttendanceRequestDialog(event.currentTarget.dataset.requestDate, "leave"));
+    $("attendanceRequestKind").addEventListener("change", syncAttendanceRequestFields);
+    $("attendanceRequestSubmit").addEventListener("click", () => submitAttendanceEditRequest($("attendanceRequestSubmit")));
+    $("attendanceRequestCancel").addEventListener("click", closeAttendanceRequestDialog);
+    $("attendanceRequestClose").addEventListener("click", closeAttendanceRequestDialog);
+    $("attendanceRequestModal").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeAttendanceRequestDialog();
     });
     $("adminQuickSearch").addEventListener("input", filterAdminRows);
     $("adminDept").addEventListener("change", filterAdminRows);
@@ -4333,6 +4470,7 @@
       if (event.key === "Escape" && $("attendanceDetailModal").classList.contains("open")) closeAttendanceDetail();
       if (event.key === "Escape" && $("adminEmployeeDetail").classList.contains("open")) closeAdminEmployeeDetail();
       if (event.key === "Escape" && $("attendanceTimeModal").classList.contains("open")) closeAttendanceTimeModal();
+      if (event.key === "Escape" && $("attendanceRequestModal").classList.contains("open")) closeAttendanceRequestDialog();
       if (event.key === "Escape" && $("appDialog").classList.contains("open")) closeAppDialog(false);
     });
     $("loginBtn").addEventListener("click", login);
