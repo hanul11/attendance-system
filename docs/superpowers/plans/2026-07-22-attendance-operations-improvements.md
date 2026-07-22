@@ -10,11 +10,11 @@
 
 ## Global Constraints
 
-- Keep the `洹쇳깭?꾪솴`, `洹쇳깭 濡쒓렇`, `吏곸썝 ?щ쾲 紐낅떒`, and `怨듯쑕?? column order unchanged.
+- Keep the `근태현황`, `근태 로그`, `직원 사번 명단`, and `공휴일` column order unchanged.
 - Do not modify login, 30-minute attendance selection, attendance calculations, GPS-free behavior, or administrator ID `2023068`.
-- Use `怨듯쑕?? columns A:C beginning at row 3.
+- Use `공휴일` columns A:C beginning at row 3.
 - Run holiday synchronization at approximately 01:00 Asia/Seoul time.
-- Do not deduct leave automatically or write correction results into `洹쇳깭?꾪솴`.
+- Do not deduct leave automatically or write correction results into `근태현황`.
 - Keep administrator polling at 60 seconds and stop it outside the visible administrator view.
 
 ---
@@ -37,7 +37,7 @@
 Add `apps-script/HolidaySync.gs` to `codeFiles` and add checks that require the holiday sheet constant, CalendarApp lookup, 01:00 trigger, manual-row preservation note, bounded A:C read, and multi-day expansion helper.
 
 ```javascript
-check("Holiday sheet config", /holidaySheetName:\s*SHEET_NAMES\.holiday/.test(configSource), "怨듯쑕??config");
+check("Holiday sheet config", /holidaySheetName:\s*SHEET_NAMES\.holiday/.test(configSource), "공휴일 config");
 check("Holiday calendar sync", /CalendarApp\.getCalendarById/.test(holidaySource), "CalendarApp lookup");
 check("Holiday sync trigger hour", /\.atHour\(1\)/.test(holidaySource), "01:00 trigger");
 check("Holiday bounded read", /getRange\([^)]*3[^)]*3/.test(holidaySource), "A:C from row 3");
@@ -88,7 +88,7 @@ function readHolidayMap_(ss) {
 }
 ```
 
-`expandHolidayRow_` must normalize Date and text values. When weekday text is `????, expand from the starting weekday through the ending weekday. Calendar events must also be expanded from inclusive start to exclusive end and appended only when the date is absent. Mark automatically added date cells with `Google Calendar ?먮룞?곕룞`; never clear or replace manual rows.
+`expandHolidayRow_` must normalize Date and text values. When weekday text is `월~수`, expand from the starting weekday through the ending weekday. Calendar events must also be expanded from inclusive start to exclusive end and appended only when the date is absent. Mark automatically added date cells with `Google Calendar 자동연동`; never clear or replace manual rows.
 
 - [ ] **Step 5: Verify GREEN**
 
@@ -175,7 +175,7 @@ appendAttendanceLog(ss, {
   dateText: input.targetDate,
   employeeId: employee.employeeId,
   name: employee.name,
-  type: '洹쇳깭 ?섏젙 ?붿껌 [' + input.kind + '] ' + sanitizeRequestReason_(input.reason),
+  type: '근태 수정 요청 [' + input.kind + '] ' + sanitizeRequestReason_(input.reason),
   savedTime: input.currentValue || '',
   actualTime: input.requestedValue || '',
   device: input.device || 'LogiFlow PWA',
@@ -185,7 +185,7 @@ appendAttendanceLog(ss, {
 });
 ```
 
-A request is pending until the corresponding `洹쇳깭?꾪솴` value equals `requestedValue`. For leave, resolve when `leaveUsed` is non-empty.
+A request is pending until the corresponding `근태현황` value equals `requestedValue`. For leave, resolve when `leaveUsed` is non-empty.
 
 - [ ] **Step 5: Extend existing dashboard payloads**
 
@@ -227,7 +227,7 @@ Expected: FAIL for missing DOM IDs and missing client/server binding.
 
 - [ ] **Step 3: Add compact employee UI**
 
-Add one unframed notice below the primary attendance actions. Hide it when no candidates exist. The dialog displays target date and two commands: `?곗감 ?좎껌` and `洹쇳깭 ?섏젙 ?붿껌`. The correction form conditionally shows a 30-minute time field for clock-in/out and always requires a reason.
+Add one unframed notice below the primary attendance actions. Hide it when no candidates exist. The dialog displays target date and two commands: `연차 신청` and `근태 수정 요청`. The correction form conditionally shows a 30-minute time field for clock-in/out and always requires a reason.
 
 - [ ] **Step 4: Implement request submission state**
 
@@ -238,11 +238,11 @@ async function submitAttendanceEditRequest(button) {
   setBusy(button, true);
   try {
     await callServer('submitAttendanceCorrectionRequest', buildAttendanceRequestPayload());
-    showSnackbar('洹쇳깭 ?섏젙 ?붿껌???깅줉?섏뿀?듬땲??');
+    showSnackbar('근태 수정 요청이 등록되었습니다.');
     closeAttendanceRequestDialog();
     await refreshEmployeeInBackground();
   } catch (error) {
-    showDialog('?붿껌 ?깅줉 ?ㅽ뙣', getFriendlyError(error));
+    showDialog('요청 등록 실패', getFriendlyError(error));
   } finally {
     state.attendanceRequestSaving = false;
     setBusy(button, false);
@@ -254,7 +254,7 @@ Do not use `alert()`. Prevent duplicate clicks and keep the selected date when v
 
 - [ ] **Step 5: Render holidays consistently**
 
-Calendar cells use the holiday name and holiday status class from server data. Holidays must not display `誘몃벑濡? or `?곗감 ?뺤씤 ?꾩슂`.
+Calendar cells use the holiday name and holiday status class from server data. Holidays must not display `미등록` or `연차 확인 필요`.
 
 - [ ] **Step 6: Verify GREEN and commit**
 
@@ -364,4 +364,3 @@ Confirm no changes to attendance formulas, sheet column order, login, administra
 git add apps-script/README.md release/README.md release/scripts/validate-release.mjs
 git commit -m "docs: document attendance operations workflow"
 ```
-
