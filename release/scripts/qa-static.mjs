@@ -38,6 +38,11 @@ const employeeRequestIds = [
 ];
 check("Employee request UI", employeeRequestIds.every((id) => new RegExp(`id=["']${id}["']`).test(html)), "Leave candidate and correction request controls");
 check("Employee request API binding", /callServer\(["']submitAttendanceCorrectionRequest["']/.test(html), "Client submits request to Apps Script");
+check("Admin pending request UI", /id=["']adminPendingRequestCount["']/.test(html) && /id=["']adminPendingRequestRows["']/.test(html) && /function renderPendingAttendanceRequests/.test(html), "Pending request count and list");
+check("Admin 60-second refresh", /function startAdminAutoRefresh/.test(html) && /60000/.test(html), "Visible administrator polling interval");
+check("Admin refresh visibility guard", /document\.visibilityState\s*!==\s*["']visible["']/.test(html) && /state\.activeView\s*!==\s*["']admin["']/.test(html), "Pause outside visible admin view");
+check("Admin refresh in-flight guard", /state\.adminLoading/.test(html), "No overlapping administrator requests");
+check("Admin dialog focus and scroll", /adminDetailTrigger/.test(html) && /modal-open/.test(html) && /\.focus\(\)/.test(html), "Scroll lock and focus restoration");
 
 function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
