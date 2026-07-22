@@ -25,6 +25,19 @@ check("Leave candidate helper", /function buildLeaveCandidates_/.test(requestSou
 check("Correction request API", /function submitAttendanceCorrectionRequest/.test(requestSource), "API exists");
 check("Correction request log reuse", /appendAttendanceLog/.test(requestSource), "Existing attendance log writer");
 check("Correction duplicate guard", /function findPendingAttendanceRequest_/.test(requestSource), "Duplicate pending request guard");
+const employeeRequestIds = [
+  "leaveCandidateNotice",
+  "leaveCandidateReviewBtn",
+  "attendanceRequestModal",
+  "attendanceRequestDate",
+  "attendanceRequestKind",
+  "attendanceRequestTime",
+  "attendanceRequestReason",
+  "attendanceRequestCancel",
+  "attendanceRequestSubmit"
+];
+check("Employee request UI", employeeRequestIds.every((id) => new RegExp(`id=["']${id}["']`).test(html)), "Leave candidate and correction request controls");
+check("Employee request API binding", /callServer\(["']submitAttendanceCorrectionRequest["']/.test(html), "Client submits request to Apps Script");
 
 function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
