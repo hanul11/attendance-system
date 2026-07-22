@@ -40,6 +40,7 @@ check("Employee request UI", employeeRequestIds.every((id) => new RegExp(`id=["'
 check("Employee request API binding", /callServer\(["']submitAttendanceCorrectionRequest["']/.test(html), "Client submits request to Apps Script");
 check("Admin pending request UI", /id=["']adminPendingRequestCount["']/.test(html) && /id=["']adminPendingRequestRows["']/.test(html) && /function renderPendingAttendanceRequests/.test(html), "Pending request count and list");
 check("Admin 60-second refresh", /function startAdminAutoRefresh/.test(html) && /60000/.test(html), "Visible administrator polling interval");
+check("Admin immediate refresh", /startAdminAutoRefresh\(\{\s*refreshNow:\s*true\s*\}\)/.test(html) && /settings\.refreshNow/.test(html), "Refresh immediately when the administrator view opens or resumes");
 check("Admin refresh visibility guard", /document\.visibilityState\s*!==\s*["']visible["']/.test(html) && /state\.activeView\s*!==\s*["']admin["']/.test(html), "Pause outside visible admin view");
 check("Admin refresh in-flight guard", /state\.adminLoading/.test(html), "No overlapping administrator requests");
 check("Admin dialog focus and scroll", /adminDetailTrigger/.test(html) && /modal-open/.test(html) && /\.focus\(\)/.test(html), "Scroll lock and focus restoration");
@@ -78,8 +79,8 @@ try {
     ["firebase/public/assets/icons/apple-touch-icon-180.png", 180, 180]
   ];
 
-  check("PWA app name", manifest.name === "한울 출퇴근 기록", manifest.name);
-  check("PWA short name", manifest.short_name === "한울 근태", manifest.short_name);
+  check("PWA app name", manifest.name === "?쒖슱 異쒗눜洹?湲곕줉", manifest.name);
+  check("PWA short name", manifest.short_name === "?쒖슱 洹쇳깭", manifest.short_name);
   check("PWA standalone mode", manifest.display === "standalone", manifest.display);
   check("PWA start URL", manifest.start_url === "/?source=pwa", manifest.start_url);
   check("PWA mobile metadata", [
@@ -208,7 +209,7 @@ const activeGpsSource = [
   read("firebase/public/index.html")
 ].join("\n");
 check("GPS-free active source", !/navigator\.geolocation|gpsDistanceM|gpsVerified|gpsLatitude|gpsLongitude|gpsLocations|LOGIFLOW_GPS_|allow=["']geolocation["']/i.test(activeGpsSource), "No active GPS permission, request, storage or configuration code");
-check("No attendance registration window", !/assertClockInRegistrationWindow|attendancePolicy|출근 등록 가능 시간이 아닙니다/.test(activeGpsSource), "Clock-in and clock-out available 24 hours");
+check("No attendance registration window", !/assertClockInRegistrationWindow|attendancePolicy|異쒓렐 ?깅줉 媛???쒓컙???꾨떃?덈떎/.test(activeGpsSource), "Clock-in and clock-out available 24 hours");
 check("Selected attendance time persistence", !/floorToHalfHour\s*\(\s*input\.actualAt\s*\)/.test(read("apps-script/Code.gs")) && /const savedAt = new Date\(input\.actualAt\)/.test(read("apps-script/Code.gs")), "Server stores selected time without flooring");
 
 try {
@@ -220,7 +221,7 @@ try {
   try {
     normalize({ employeeId: "2023068", type: "clockIn", actualAt: "2026-07-16T10:31:00+09:00" });
   } catch (error) {
-    invalidMinuteRejected = /30분/.test(error.message);
+    invalidMinuteRejected = /30遺?.test(error.message);
   }
   check("24-hour half-hour server policy", midnight.actualAt.getMinutes() === 0 && late.actualAt.getMinutes() === 30 && invalidMinuteRejected, "00:00 and 23:30 accepted; 10:31 rejected");
 } catch (error) {
@@ -259,7 +260,7 @@ try {
   try {
     operational.saveOperationalSettings({ adminEmployeeId: "1000001", notifications: {} });
   } catch (error) {
-    unauthorizedRejected = /관리자/.test(error.message);
+    unauthorizedRejected = /愿由ъ옄/.test(error.message);
   }
   check("Operational settings admin guard", unauthorizedRejected, "Non-admin save rejected");
 } catch (error) {
@@ -270,3 +271,4 @@ for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail
 for (const result of failures) console.error(`[FAIL] ${result.name}: ${result.detail}`);
 console.log(`${passes.length} passed, ${failures.length} failed`);
 if (failures.length) process.exitCode = 1;
+
