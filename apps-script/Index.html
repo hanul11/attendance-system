@@ -850,7 +850,7 @@
     .attendance-calendar .day-number { width: 26px; height: 26px; font-size: 13px; font-weight: 650; }
     .attendance-calendar .day.date-saturday .day-number { color: #3569c8; }
     .attendance-calendar .day.date-sunday .day-number { color: #d14b55; }
-    .attendance-calendar .day.holiday-date .day-number { color: #c43f4a; background: #fff1f2; }
+    .attendance-calendar .day.holiday-date .day-number { color: #dc2626; }
     .attendance-calendar .day.today { border-color: rgba(37, 99, 235, .35); background: #f8faff; }
     .attendance-calendar .day.today .day-number { background: var(--blue); color: #fff; }
     .attendance-calendar .day.selected { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37, 99, 235, .08); }
@@ -878,13 +878,13 @@
       height: 6px;
       flex: 0 0 6px;
       border-radius: 50%;
-      background: #22a06b;
+      background: #15803d;
       content: "";
     }
-    .attendance-state-badge.early::before, .attendance-legend i.early { background: #ed9a26; }
-    .attendance-state-badge.overtime::before, .attendance-legend i.overtime { background: #8b5cf6; }
-    .attendance-state-badge.leave::before, .attendance-legend i.leave { background: #3b82f6; }
-    .attendance-state-badge.missing::before, .attendance-legend i.missing { background: #e44c55; }
+    .attendance-state-badge.early::before, .attendance-legend i.early { background: #ea580c; }
+    .attendance-state-badge.overtime::before, .attendance-legend i.overtime { background: #7c3aed; }
+    .attendance-state-badge.leave::before, .attendance-legend i.leave { background: #2563eb; }
+    .attendance-state-badge.missing::before, .attendance-legend i.missing { background: #64748b; }
 
     .attendance-legend {
       display: flex;
@@ -908,8 +908,8 @@
     .attendance-recent-date .app-date,
     .attendance-all-date .app-date,
     .home-recent-date .app-date { white-space: nowrap; }
-    .app-date.date-holiday { color: #c43f4a; }
-    .holiday-date-name { display: inline-block; margin-left: 6px; color: #c43f4a; font-size: .84em; font-weight: 650; white-space: nowrap; }
+    .app-date.date-holiday { color: #dc2626; }
+    .holiday-date-name { display: inline-block; margin-left: 6px; color: #dc2626; font-size: .84em; font-weight: 650; white-space: nowrap; }
     .attendance-recent-date > span { display: block; margin-top: 3px; color: var(--faint); font-size: 10px; }
     .attendance-recent-flow { display: flex; align-items: center; gap: 9px; color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 700; }
     .attendance-recent-flow .material-symbols-rounded { color: var(--faint); font-size: 17px; }
@@ -2436,6 +2436,7 @@
       attendanceRequestSaving: false,
       historyMonth: null,
       historyRows: [],
+      holidays: {},
       historyCache: {},
       historyLoading: false,
       selectedAttendanceDate: null,
@@ -2763,6 +2764,43 @@
       if (!name) return dateDisplayHtml(value);
       return '<span class="app-date date-holiday">' + escapeHtml(formatAppDate(value)) + '</span>' +
         '<span class="holiday-date-name">' + escapeHtml(name) + '</span>';
+    }
+
+    function setHolidayMap(holidayMap) {
+      state.holidays = Object.entries(holidayMap || {}).reduce((result, entry) => {
+        const date = parseAttendanceDate(entry[0]);
+        const name = String(entry[1] || "").trim();
+        if (date && name) result[formatSheetDate(date)] = name;
+        return result;
+      }, {});
+    }
+
+    function getHolidayName(value, row) {
+      const directName = String(row?.holidayName || "").trim();
+      if (directName) return directName;
+      const date = normalizeAppDate(value);
+      return date ? String(state.holidays[formatSheetDate(date)] || "").trim() : "";
+    }
+
+    function mergeHolidayRowsForMonth(rows, year, month) {
+      const mergedRows = (rows || []).map((row) => Object.assign({}, row, {
+        holidayName: getHolidayName(row.date, row)
+      }));
+      const existingDates = new Set(mergedRows.map((row) => {
+        const date = parseAttendanceDate(row.date);
+        return date ? formatSheetDate(date) : "";
+      }));
+
+      Object.entries(state.holidays).forEach((entry) => {
+        const date = parseAttendanceDate(entry[0]);
+        if (!date || date.getFullYear() !== year || date.getMonth() !== month) return;
+        const dateKey = formatSheetDate(date);
+        if (!existingDates.has(dateKey)) {
+          mergedRows.push({ date: dateKey, holidayName: entry[1] });
+          existingDates.add(dateKey);
+        }
+      });
+      return mergedRows;
     }
 
     function setDateDisplay(id, value, suffix) {
@@ -3221,6 +3259,7 @@
 
     function applyEmployeePayload(payload) {
       state.employee = payload;
+      setHolidayMap(payload.holidays || {});
       if (payload.operationalSettings) {
         state.operationalSettings = payload.operationalSettings;
       }
@@ -3707,8 +3746,8 @@
     }
 
     function getAttendanceDayState(row, date) {
-      if (hasAttendanceValue(row?.leaveUsed)) return { key: "leave", label: "연차" };
       if (row?.holidayName) return { key: "holiday", label: row.holidayName };
+      if (hasAttendanceValue(row?.leaveUsed)) return { key: "leave", label: "연차" };
       if (hasAttendanceValue(row?.overtime)) return { key: "overtime", label: "잔업" };
       if (hasAttendanceValue(row?.early)) return { key: "early", label: "조출" };
       if (row?.clockIn) return { key: "normal", label: "정상" };
@@ -3729,10 +3768,11 @@
       setText("historyHeaderMonth", monthLabel);
       setText("attendanceAllMonthLabel", monthLabel);
 
-      const monthRows = state.historyRows.filter((row) => {
+      let monthRows = state.historyRows.filter((row) => {
         const date = parseAttendanceDate(row.date);
         return date && date.getFullYear() === year && date.getMonth() === month;
       });
+      monthRows = mergeHolidayRowsForMonth(monthRows, year, month);
       const byDay = new Map(monthRows.map((row) => [parseAttendanceDate(row.date).getDate(), row]));
       const firstDay = new Date(year, month, 1).getDay();
       const lastDate = new Date(year, month + 1, 0).getDate();
@@ -3941,6 +3981,7 @@
           year: target.getFullYear(),
           month: target.getMonth() + 1
         });
+        setHolidayMap(response?.holidays || {});
         state.historyCache[key] = response?.rows || [];
         state.historyMonth = target;
         state.historyRows = state.historyCache[key];
