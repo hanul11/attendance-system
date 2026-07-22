@@ -1,12 +1,12 @@
 {
   "appId": "kr.co.hanul.logiflow",
-  "appName": "LOGIFLOW",
+  "appName": "Hanul근태관리",
   "webDir": "../firebase/public",
   "server": {
-    "url": "https://YOUR_FIREBASE_PROJECT_ID.web.app",
+    "url": "https://hanul-logiflow-attendance.web.app",
     "cleartext": false,
     "allowNavigation": [
-      "YOUR_FIREBASE_PROJECT_ID.web.app",
+      "hanul-logiflow-attendance.web.app",
       "script.google.com",
       "*.googleusercontent.com",
       "accounts.google.com"
