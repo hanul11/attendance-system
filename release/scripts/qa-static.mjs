@@ -43,6 +43,8 @@ check("Admin 60-second refresh", /function startAdminAutoRefresh/.test(html) && 
 check("Admin refresh visibility guard", /document\.visibilityState\s*!==\s*["']visible["']/.test(html) && /state\.activeView\s*!==\s*["']admin["']/.test(html), "Pause outside visible admin view");
 check("Admin refresh in-flight guard", /state\.adminLoading/.test(html), "No overlapping administrator requests");
 check("Admin dialog focus and scroll", /adminDetailTrigger/.test(html) && /modal-open/.test(html) && /\.focus\(\)/.test(html), "Scroll lock and focus restoration");
+check("Holiday calendar date tone", /holiday-date/.test(html) && /row\?\.holidayName/.test(html), "Holiday dates receive a dedicated calendar tone");
+check("Holiday name date display", /function holidayDateDisplayHtml/.test(html) && /holiday-date-name/.test(html), "Formatted attendance dates include the holiday name");
 
 function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
