@@ -5,12 +5,13 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => fs.readFileSync(path.join(rootDir, relativePath), "utf8");
-const codeFiles = ["apps-script/Config.gs", "apps-script/Utils.gs", "apps-script/OperationalSettings.gs", "apps-script/HolidaySync.gs", "apps-script/Code.gs", "apps-script/Notifications.gs"];
+const codeFiles = ["apps-script/Config.gs", "apps-script/Utils.gs", "apps-script/OperationalSettings.gs", "apps-script/HolidaySync.gs", "apps-script/AttendanceRequests.gs", "apps-script/Code.gs", "apps-script/Notifications.gs"];
 const serverSource = codeFiles.map(read).join("\n");
 const html = read("apps-script/Index.html");
 const releaseConfig = JSON.parse(read("release/release-config.json"));
 const configSource = read("apps-script/Config.gs");
 const holidaySource = read("apps-script/HolidaySync.gs");
+const requestSource = read("apps-script/AttendanceRequests.gs");
 const failures = [];
 const passes = [];
 
@@ -20,6 +21,10 @@ check("Holiday sync trigger hour", /\.atHour\(CONFIG\.holidaySyncHour\)/.test(ho
 check("Holiday bounded read", /getRange\(CONFIG\.holidayStartRow,\s*1,\s*count,\s*3\)/.test(holidaySource), "A:C from row 3");
 check("Holiday manual rows preserved", /Google Calendar/.test(holidaySource) && !/\.clear\(/.test(holidaySource), "Append-only calendar synchronization");
 check("Holiday row expansion", /function expandHolidayRow_/.test(holidaySource), "Multi-day row parser");
+check("Leave candidate helper", /function buildLeaveCandidates_/.test(requestSource), "Helper exists");
+check("Correction request API", /function submitAttendanceCorrectionRequest/.test(requestSource), "API exists");
+check("Correction request log reuse", /appendAttendanceLog/.test(requestSource), "Existing attendance log writer");
+check("Correction duplicate guard", /function findPendingAttendanceRequest_/.test(requestSource), "Duplicate pending request guard");
 
 function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
@@ -128,6 +133,35 @@ try {
   check("Work-time calculation", utilities.computeWorkMinutes("9:00", "18:00") === 480, "09:00-18:00 minus 60 minutes = 480 minutes");
 } catch (error) {
   check("Attendance utility checks", false, error.message);
+}
+
+try {
+  const requestHelpers = new Function(
+    "formatDate", "parseSheetDateText", "attendanceDateToTimestamp", "stripTime",
+    requestSource + "; return { buildLeaveCandidates_ };"
+  )(
+    (value) => `${value.getFullYear()}. ${value.getMonth() + 1}. ${value.getDate()}`,
+    (value) => {
+      const match = String(value).match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/);
+      return match ? { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) } : null;
+    },
+    (value) => {
+      const match = String(value).match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/);
+      return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime() : 0;
+    },
+    (value) => new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  );
+  const rows = [
+    { date: "2026. 7. 20", clockIn: "", clockOut: "", leaveUsed: "" },
+    { date: "2026. 7. 18", clockIn: "", clockOut: "", leaveUsed: "" },
+    { date: "2026. 7. 17", clockIn: "", clockOut: "", leaveUsed: "" },
+    { date: "2026. 7. 16", clockIn: "8:30", clockOut: "", leaveUsed: "" },
+    { date: "2026. 7. 15", clockIn: "", clockOut: "", leaveUsed: "1" }
+  ];
+  const candidates = requestHelpers.buildLeaveCandidates_(rows, { "2026. 7. 17": "Holiday" }, new Date(2026, 6, 21));
+  check("Leave candidate weekday rules", JSON.stringify(candidates.map((row) => row.date)) === JSON.stringify(["2026. 7. 20"]), "Only prior empty weekday is a candidate");
+} catch (error) {
+  check("Leave candidate weekday rules", false, error.message);
 }
 
 try {
