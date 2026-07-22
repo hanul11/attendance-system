@@ -55,9 +55,12 @@ const capacitor = readJson("mobile/capacitor.config.json");
 const appConfig = read("firebase/public/config/app-config.js");
 const firebaseConfig = read("firebase/public/config/firebase-config.js");
 const appHtml = read("apps-script/Index.html");
-const serverSource = ["Config.gs", "OperationalSettings.gs", "Code.gs"]
+const serverFiles = ["Config.gs", "Utils.gs", "OperationalSettings.gs", "HolidaySync.gs", "AttendanceRequests.gs", "Code.gs", "Notifications.gs"];
+const serverSource = serverFiles
   .map((fileName) => read(`apps-script/${fileName}`))
   .join("\n");
+const holidaySource = read("apps-script/HolidaySync.gs");
+const requestSource = read("apps-script/AttendanceRequests.gs");
 
 assertEqual("App package ID", config.app.bundleId, capacitor.appId, "mobile/capacitor.config.json");
 assertEqual("Mobile package version", config.app.version, mobilePackage.version, "mobile/package.json");
@@ -120,6 +123,23 @@ if (activeGpsPattern.test(appHtml + serverSource)) {
   add("pass", "GPS-free attendance", "No active GPS permission, request, storage or configuration code was detected.");
 }
 
+add(serverFiles.every((fileName) => exists(`apps-script/${fileName}`)) ? "pass" : "block", "Apps Script modules", "Holiday and attendance-request modules are present.");
+add(/CalendarApp\.getCalendarById/.test(holidaySource) && /\.atHour\(CONFIG\.holidaySyncHour\)/.test(holidaySource) ? "pass" : "block", "Holiday synchronization", "Calendar lookup and 01:00 configured trigger are present.");
+add(/function submitAttendanceCorrectionRequest/.test(requestSource) && /appendAttendanceLog/.test(requestSource) ? "pass" : "block", "Attendance correction requests", "Requests reuse the existing attendance log.");
+add(!/setValue|setValues|insertColumn|deleteColumn/.test(requestSource) ? "pass" : "block", "Attendance request data isolation", "Request module does not write to attendance cells or alter columns.");
+add(/function startAdminAutoRefresh/.test(appHtml) && /60000/.test(appHtml) && /document\.visibilityState/.test(appHtml) ? "pass" : "block", "Administrator monitoring", "Visibility-aware 60-second refresh is configured.");
+
+const functionNames = [...serverSource.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((match) => match[1]);
+const duplicateFunctions = Object.entries(functionNames.reduce((counts, name) => {
+  counts[name] = (counts[name] || 0) + 1;
+  return counts;
+}, {})).filter(([, count]) => count > 1);
+add(duplicateFunctions.length ? "block" : "pass", "Apps Script function declarations", duplicateFunctions.length ? JSON.stringify(duplicateFunctions) : "No duplicate declarations.");
+
+const calledServerFunctions = [...new Set([...appHtml.matchAll(/callServer\(["']([A-Za-z0-9_]+)["']/g)].map((match) => match[1]))];
+const missingServerFunctions = calledServerFunctions.filter((name) => !functionNames.includes(name));
+add(missingServerFunctions.length ? "block" : "pass", "Client/server API contract", missingServerFunctions.length ? `Missing: ${missingServerFunctions.join(", ")}` : `${calledServerFunctions.length} APIs resolved.`);
+
 const levels = { pass: "PASS", warn: "WARN", block: "BLOCK" };
 console.log(`LOGIFLOW Release Check - ${platform} - v${config.app.version} (${config.app.buildNumber})`);
 console.log("=".repeat(72));
@@ -128,4 +148,3 @@ const blockers = checks.filter((check) => check.level === "block");
 console.log("=".repeat(72));
 console.log(blockers.length ? `Release blocked: ${blockers.length} item(s)` : "Release configuration ready");
 if (strict && blockers.length) process.exitCode = 1;
-
