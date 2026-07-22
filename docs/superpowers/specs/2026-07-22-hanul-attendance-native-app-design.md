@@ -1,172 +1,171 @@
-# Hanul洹쇳깭愿由?Native App Design
+# Hanul근태관리 네이티브 앱 설계
 
-## Goal
+## 목표
 
-Package the existing LOGIFLOW Google Apps Script attendance system as an installable Android and iPhone application named `Hanul洹쇳깭愿由?. Preserve the current Google Sheets schema, Apps Script attendance behavior, employee login, attendance calculations, and administrator permissions.
+현재 운영 중인 LOGIFLOW Google Apps Script 근태관리 시스템을 Android와 iPhone에 설치할 수 있는 `Hanul근태관리` 앱으로 패키징한다. 기존 Google Sheets 구조, Apps Script 근태 처리, 사번 로그인, 근태 계산 방식 및 관리자 권한은 그대로 유지한다.
 
-The native application must support employee-specific push notifications whose types and schedules are controlled from the existing administrator operational settings screen.
+네이티브 앱에서는 직원별 푸시 알림을 지원한다. 알림 종류와 발송 시간은 현재 관리자 화면의 운영 설정을 기준으로 적용한다.
 
-## Application Identity
+## 앱 기본 정보
 
-- Display name: `Hanul洹쇳깭愿由?
-- Bundle/application ID: `kr.co.hanul.logiflow`
-- Version: `1.0.0`
-- Build number: `1`
-- Primary icon: the flower symbol extracted from the Hanul corporate identity
-- Icon background: transparent source with platform-specific Android adaptive and iOS rendered variants
-- Splash screen: light gray application background with the same flower symbol
+- 앱 표시 이름: `Hanul근태관리`
+- 앱 내부 식별자: `kr.co.hanul.logiflow`
+- 버전: `1.0.0`
+- 빌드 번호: `1`
+- 기본 아이콘: 한울생약 회사 CI에서 추출한 꽃 심볼
+- 아이콘 배경: 투명 원본을 사용하고 Android와 iPhone 규격에 맞는 결과물 생성
+- 시작 화면: 연한 회색 배경과 동일한 꽃 심볼 사용
 
-The existing bundle ID remains unchanged to avoid unnecessary release configuration churn. The user-facing display name changes independently.
+불필요한 배포 설정 변경을 피하기 위해 앱 내부 식별자는 유지한다. 사용자에게 표시되는 앱 이름만 `Hanul근태관리`로 변경한다.
 
-## Architecture
+## 전체 구조
 
-### Native shell
+### 네이티브 앱 영역
 
-Capacitor provides the Android WebView and iPhone WKWebView containers. The shell starts from bundled local assets, initializes native services, and then opens the production Apps Script web application inside the allowed secure navigation scope.
+Capacitor를 사용하여 Android WebView와 iPhone WKWebView 앱을 구성한다. 앱은 기기에 포함된 로컬 시작 화면을 먼저 실행하고 네이티브 서비스를 초기화한 뒤, 허용된 보안 탐색 범위 안에서 현재 운영 중인 Apps Script 웹앱을 연다.
 
-The production Apps Script URL remains the source of the attendance user interface and business behavior. The native shell must not duplicate attendance calculations or Google Sheets writes.
+운영 Apps Script 웹앱이 근태 화면과 업무 처리의 기준이 된다. 네이티브 앱에서는 근태 계산이나 Google Sheets 저장 기능을 중복 구현하지 않는다.
 
-### Existing attendance system
+### 기존 근태 시스템 영역
 
-The following remain authoritative and unchanged:
+다음 기능은 기존 Apps Script와 Google Sheets를 기준으로 그대로 유지한다.
 
-- Employee login and automatic login
-- Attendance registration and duplicate prevention
-- Google Sheets attendance storage
-- Attendance log storage
-- Monthly attendance and statistics
-- Administrator permissions and dashboard data
-- Early work, overtime, OT, leave, and holiday rules
+- 사번 로그인 및 자동 로그인
+- 출근·퇴근 등록과 중복 등록 방지
+- Google Sheets 근태 저장
+- 근태로그 저장
+- 월별 근태 및 통계 조회
+- 관리자 권한과 관리자 화면 데이터
+- 조출, 잔업, OT, 연차 및 공휴일 처리 기준
 
-Only the minimal integration required for native device registration and notification preferences may be added around successful login and logout events.
+네이티브 기기 등록과 알림 설정을 연결하는 데 필요한 최소한의 코드만 로그인 성공 및 로그아웃 처리 주변에 추가한다.
 
-### Firebase services
+### Firebase 영역
 
-- Firebase Cloud Messaging delivers Android and iPhone notifications.
-- Firestore stores device registrations and notification preferences only.
-- Firebase Functions validates notification requests and sends FCM messages.
-- Firebase Secret Manager stores the shared server credential.
-- APNs credentials are configured in Firebase for iPhone delivery.
+- Firebase Cloud Messaging에서 Android와 iPhone 푸시 알림을 발송한다.
+- Firestore에는 기기 등록 정보와 알림 수신 설정만 저장한다.
+- Firebase Functions에서 알림 요청을 검증하고 FCM 메시지를 발송한다.
+- Firebase Secret Manager에서 서버 간 인증값을 관리한다.
+- iPhone 알림 발송을 위해 Firebase에 APNs 인증 정보를 설정한다.
 
-Attendance and employee records are not migrated to Firestore.
+근태 데이터와 직원 정보는 Firestore로 이전하지 않는다.
 
-## Device Registration
+## 기기 등록 흐름
 
-1. The native shell creates an installation identifier and requests notification permission at an appropriate point in the first-run flow.
-2. FCM returns a device token.
-3. The token is initially associated with the installation identifier.
-4. After the existing Apps Script login succeeds, the validated employee number is bound to that installation through a server-authenticated registration request.
-5. Token refresh updates the existing installation record.
-6. Logout disables or unbinds the installation so it no longer receives employee notifications.
-7. Re-login binds the current employee to the installation again.
+1. 네이티브 앱이 설치 식별자를 생성하고 최초 실행 과정에서 알림 권한을 요청한다.
+2. FCM에서 기기 토큰을 발급한다.
+3. 발급된 토큰을 설치 식별자와 먼저 연결한다.
+4. 기존 Apps Script 로그인이 성공하면 검증된 사번을 해당 설치 정보와 서버 방식으로 연결한다.
+5. FCM 토큰이 갱신되면 같은 설치 정보의 토큰을 업데이트한다.
+6. 로그아웃하면 해당 설치 정보를 비활성화하거나 사번 연결을 해제하여 직원 알림 발송 대상에서 제외한다.
+7. 다시 로그인하면 현재 로그인한 사번과 설치 정보를 다시 연결한다.
 
-Firestore device records contain only the employee number, installation identifier, platform, FCM token, notification preferences, active state, and update timestamps.
+Firestore 기기 문서에는 사번, 설치 식별자, 운영체제, FCM 토큰, 알림 설정, 활성 상태 및 수정 시간만 저장한다.
 
-## Notification Policy
+## 알림 운영 기준
 
-The administrator operational settings stored in Apps Script `Script Properties` are the global source of truth.
+Apps Script `Script Properties`에 저장된 관리자 운영 설정을 전체 알림의 기준으로 사용한다.
 
-Supported settings:
+지원 항목은 다음과 같다.
 
-- Check-in notification enabled and time
-- Missing check-in notification enabled and time
-- Check-out notification enabled and time
-- Missing check-out notification enabled and time
+- 출근 알림 사용 여부 및 발송 시간
+- 출근 미등록 알림 사용 여부 및 발송 시간
+- 퇴근 알림 사용 여부 및 발송 시간
+- 퇴근 미등록 알림 사용 여부 및 발송 시간
 
-Default times remain `07:00`, `09:00`, `18:00`, and `20:00`, but notification code must not hardcode them as the effective schedule.
+기본 시간은 `07:00`, `09:00`, `18:00`, `20:00`으로 유지한다. 다만 실제 발송 시간은 코드에 고정하지 않고 관리자가 운영 설정에서 저장한 최신 시간을 사용한다.
 
-Employee settings control personal receipt preferences:
+직원 설정에서는 개인별 수신 여부를 관리한다.
 
-- Check-in notifications ON/OFF
-- Check-out notifications ON/OFF
+- 출근 알림 ON/OFF
+- 퇴근 알림 ON/OFF
 
-A notification is sent only when both the corresponding administrator setting and employee preference are enabled.
+관리자 운영 설정과 직원 개인 설정이 모두 ON인 경우에만 해당 알림을 발송한다.
 
-## Notification Flow
+## 알림 발송 흐름
 
-1. Apps Script scheduled processing reads the latest operational settings from `Script Properties`.
-2. For general check-in or check-out notices, the server requests delivery to all active eligible installations.
-3. For missing-registration notices, Apps Script determines the missing employee numbers from the existing employee roster and attendance data.
-4. Apps Script sends a signed request to the Firebase Function with the notification type and eligible employee numbers.
-5. The Firebase Function verifies the server credential, resolves active tokens in Firestore, applies personal preferences, and sends FCM messages.
-6. Invalid or expired tokens are disabled.
-7. Selecting a notification opens the native application and routes to the employee home screen.
+1. Apps Script 예약 처리에서 `Script Properties`의 최신 운영 설정을 읽는다.
+2. 일반 출근·퇴근 안내는 해당 알림을 허용한 활성 기기를 대상으로 발송 요청을 만든다.
+3. 미등록 안내는 기존 직원 사번 명단과 근태현황 데이터를 이용하여 미등록 직원의 사번을 계산한다.
+4. Apps Script가 알림 종류와 대상 사번 목록을 포함한 서명 요청을 Firebase Function으로 전송한다.
+5. Firebase Function이 서버 인증값을 확인하고 Firestore에서 활성 기기 토큰을 조회한 뒤 개인별 수신 설정을 적용한다.
+6. FCM으로 대상 기기에 메시지를 전송한다.
+7. 만료되었거나 사용할 수 없는 토큰은 비활성화한다.
+8. 직원이 알림을 누르면 Hanul근태관리 앱이 실행되고 홈 화면으로 이동한다.
 
-The notification request must not contain full attendance rows or employee names.
+알림 요청에는 전체 근태 행이나 직원 이름을 포함하지 않는다.
 
-## Administrator Settings
+## 관리자 운영 설정
 
-The existing operational settings screen remains the editing surface. Saving continues to use `Script Properties`, not Google Sheets.
+현재 관리자 화면의 운영 설정을 알림 설정 화면으로 계속 사용한다. 저장 위치도 기존과 같이 Google Sheets가 아닌 `Script Properties`를 사용한다.
 
-The native notification scheduler reads the same settings, so an administrator can change notification types and times without rebuilding the application.
+알림 예약 처리가 동일한 운영 설정을 읽으므로 관리자가 알림 종류나 시간을 변경해도 앱을 다시 빌드하거나 배포할 필요가 없다.
 
-## Platform Packaging
+## Android 패키징
 
-### Android
+- Capacitor Android 프로젝트를 생성한다.
+- 앱 이름, 앱 식별자, 아이콘, 시작 화면 및 HTTPS 네트워크 설정을 적용한다.
+- 실제 Android 기기에서 확인할 수 있는 디버그 APK 빌드를 지원한다.
+- 서명용 비밀정보를 저장소에 올리지 않고 운영 APK 및 AAB 빌드 구조를 준비한다.
 
-- Generate the Capacitor Android project.
-- Apply application name, package ID, icons, splash screen, and secure network configuration.
-- Support debug APK generation for device testing.
-- Prepare signed APK and AAB release configuration without committing keystore secrets.
+## iPhone 패키징
 
-### iPhone
+- Capacitor iOS 프로젝트를 생성한다.
+- 앱 표시 이름, Bundle ID, 아이콘, 시작 화면, 알림 권한 및 앱 이동 설정을 적용한다.
+- Xcode와 TestFlight 배포 설정을 준비한다.
+- 최종 아카이브 및 TestFlight 업로드에는 macOS, Xcode, Apple Developer 계정, 인증서, Provisioning Profile 및 APNs Key가 필요하다.
 
-- Generate the Capacitor iOS project.
-- Apply display name, bundle ID, icons, splash screen, notification capabilities, and URL handling.
-- Prepare Xcode and TestFlight configuration.
-- Final archive and TestFlight upload require macOS, Xcode, an Apple Developer account, signing certificates, a provisioning profile, and an APNs key.
+## 보안 기준
 
-## Security
+- Firebase 비밀정보, APNs Key, 서명 키, Android Keystore, 비밀번호 및 서비스 계정 Private Key는 GitHub에 저장하지 않는다.
+- Apps Script의 알림 요청 인증값은 `Script Properties`에 저장한다.
+- Firebase 쪽 인증값은 Secret Manager에 저장한다.
+- Firebase Function은 인증되지 않았거나 올바르지 않은 요청을 거부한다.
+- Firestore 보안 규칙으로 다른 직원의 기기 등록 정보 조회 및 수정을 제한한다.
+- 운영 앱 연결은 HTTPS만 허용한다.
 
-- No Firebase API secrets, APNs keys, signing keys, keystores, passwords, or service-account private keys are committed.
-- Apps Script stores its notification request credential in `Script Properties`.
-- Firebase stores the corresponding credential in Secret Manager.
-- Firebase Functions reject unsigned or invalid notification requests.
-- Firestore rules prevent clients from listing or modifying other employees' device registrations.
-- Production navigation uses HTTPS only.
+## 오류 처리
 
-## Error Handling
+- 직원이 알림 권한을 거부해도 근태 앱은 정상적으로 사용할 수 있어야 한다.
+- 기기 토큰 등록 실패는 근태 기능을 막지 않고 안내 메시지를 표시한 후 나중에 재시도한다.
+- Firebase 장애가 발생해도 로그인, 출퇴근 등록 및 Google Sheets 저장은 정상 동작해야 한다.
+- 만료된 토큰은 발송 처리 중 비활성화한다.
+- 알림 초기화가 실패해도 앱은 기존 Apps Script 근태 화면을 정상적으로 연다.
 
-- Notification permission refusal does not block attendance use.
-- Token registration failures show a non-blocking message and retry later.
-- Firebase outages do not block login, attendance registration, or Google Sheets writes.
-- Expired tokens are disabled during send processing.
-- App startup falls back to the existing Apps Script application even when notification initialization fails.
+## 검증 항목
 
-## Testing
+- 기존 근태 정적 QA가 모두 통과해야 한다.
+- Android 디버그 빌드와 WebView 운영 앱 연결을 확인한다.
+- 최초 로그인, 자동 로그인, 로그아웃 및 기기 토큰 재연결을 확인한다.
+- 앱 재빌드 없이 관리자 알림 시간 변경이 반영되는지 확인한다.
+- 전체 안내와 미등록 직원 안내의 대상이 각각 올바른지 확인한다.
+- 직원 개인별 알림 ON/OFF 설정을 확인한다.
+- 알림 선택 시 앱 홈 화면으로 이동하는지 확인한다.
+- 알림 권한 거부와 오프라인 실행이 근태 기능을 막지 않는지 확인한다.
+- iPhone 알림과 TestFlight 설치는 macOS 및 실제 iPhone에서 최종 확인한다.
 
-- Existing static attendance QA must continue to pass.
-- Validate Android debug build and WebView navigation.
-- Verify first login, automatic login, logout, and token re-binding.
-- Verify administrator schedule changes are read without rebuilding the app.
-- Verify general and missing-registration recipient selection separately.
-- Verify employee notification preferences.
-- Verify notification selection opens the home screen.
-- Verify notification denial and offline startup do not block attendance.
-- iPhone delivery and TestFlight installation require testing on macOS and a physical iPhone.
+## 결과물
 
-## Deliverables
+- 수정된 Capacitor 설정
+- 생성된 Android 프로젝트
+- 생성된 iOS 프로젝트
+- 한울생약 꽃 심볼 Android/iPhone 아이콘 및 시작 화면 리소스
+- 네이티브 기기 알림 등록 모듈
+- Firestore 기기 등록 구조 및 보안 규칙
+- Firebase Function 알림 발송 모듈
+- Apps Script 알림 예약 및 서버 인증 연동
+- Android APK/AAB 빌드 안내서
+- iPhone TestFlight 빌드 안내서
+- 배포 검증 스크립트 보완
 
-- Updated Capacitor configuration
-- Generated Android project
-- Generated iOS project
-- Hanul flower icon and splash asset sets
-- Native notification registration layer
-- Firestore device registration model and rules
-- Firebase Function notification sender
-- Apps Script notification scheduling and secure request integration
-- Android APK/AAB build instructions
-- iPhone TestFlight build instructions
-- Release validation updates
+## 외부 계정이 필요한 작업
 
-## External Prerequisites
+다음 항목은 소스 코드만으로 완료할 수 없으며 실제 계정 정보가 필요하다.
 
-The following cannot be completed from source code alone:
+- Firebase 프로젝트 설정값 입력
+- 필요한 경우 Firebase Functions 유료 요금제 활성화 및 배포
+- Android 운영 서명용 Keystore와 Google Play 계정
+- Apple Developer 계정, macOS, Xcode, 서명 인증서 및 APNs Key
 
-- Firebase project configuration values
-- Firebase Functions billing-enabled deployment where required
-- Android release keystore and Google Play account
-- Apple Developer account, macOS, Xcode, signing assets, and APNs key
-
-All code paths remain configurable with placeholders until these account-owned values are supplied.
+계정 정보가 준비되기 전까지 관련 코드는 Placeholder와 안전한 설정 분리 구조로 유지한다.
 
