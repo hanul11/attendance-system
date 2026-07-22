@@ -45,6 +45,10 @@ check("Admin refresh in-flight guard", /state\.adminLoading/.test(html), "No ove
 check("Admin dialog focus and scroll", /adminDetailTrigger/.test(html) && /modal-open/.test(html) && /\.focus\(\)/.test(html), "Scroll lock and focus restoration");
 check("Holiday calendar date tone", /holiday-date/.test(html) && /row\?\.holidayName/.test(html), "Holiday dates receive a dedicated calendar tone");
 check("Holiday name date display", /function holidayDateDisplayHtml/.test(html) && /holiday-date-name/.test(html), "Formatted attendance dates include the holiday name");
+check("Holiday map client state", /holidays:\s*\{\}/.test(html) && /function setHolidayMap/.test(html), "Holiday sheet data is retained independently of attendance rows");
+check("Holiday-only calendar rows", /function mergeHolidayRowsForMonth/.test(html) && /mergeHolidayRowsForMonth\(monthRows,\s*year,\s*month\)/.test(html), "Every holiday in the selected month is rendered");
+check("Monthly holiday response binding", /setHolidayMap\(response\?\.holidays\s*\|\|\s*\{\}\)/.test(html), "Month changes refresh holiday data");
+check("Distinct attendance legend palette", ["#15803d", "#ea580c", "#7c3aed", "#2563eb", "#dc2626", "#64748b"].every((color) => html.includes(color)), "Six clearly separated status colors");
 
 function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
