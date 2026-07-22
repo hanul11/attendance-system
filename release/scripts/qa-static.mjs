@@ -41,6 +41,7 @@ check("Employee request API binding", /callServer\(["']submitAttendanceCorrectio
 check("Admin pending request UI", /id=["']adminPendingRequestCount["']/.test(html) && /id=["']adminPendingRequestRows["']/.test(html) && /function renderPendingAttendanceRequests/.test(html), "Pending request count and list");
 check("Admin 60-second refresh", /function startAdminAutoRefresh/.test(html) && /60000/.test(html), "Visible administrator polling interval");
 check("Admin immediate refresh", /startAdminAutoRefresh\(\{\s*refreshNow:\s*true\s*\}\)/.test(html) && /settings\.refreshNow/.test(html), "Refresh immediately when the administrator view opens or resumes");
+check("Statistics work info two-column layout", /\.stats-info-card\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s.test(html), "Average clock-in and clock-out share one row");
 check("Admin refresh visibility guard", /document\.visibilityState\s*!==\s*["']visible["']/.test(html) && /state\.activeView\s*!==\s*["']admin["']/.test(html), "Pause outside visible admin view");
 check("Admin refresh in-flight guard", /state\.adminLoading/.test(html), "No overlapping administrator requests");
 check("Admin dialog focus and scroll", /adminDetailTrigger/.test(html) && /modal-open/.test(html) && /\.focus\(\)/.test(html), "Scroll lock and focus restoration");
