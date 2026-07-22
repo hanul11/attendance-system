@@ -1,19 +1,20 @@
-# LOGIFLOW Release 以鍮?
-???대뜑??湲곗〈 Google Apps Script 諛?Google Sheets 洹쇳깭 濡쒖쭅???좎??섎㈃??PWA, iPhone, Android 諛고룷???꾩슂???ㅼ젙怨?寃利??먮즺瑜?愿由ы빀?덈떎.
+# LOGIFLOW Release 준비
 
-## ?뺤쟻 QA
+이 폴더는 기존 Google Apps Script 및 Google Sheets 근태 로직을 유지하면서 PWA, iPhone, Android 배포에 필요한 설정과 검증 자료를 관리합니다.
 
-?꾨줈?앺듃 猷⑦듃?먯꽌 ?ㅼ쓬 寃利앹쓣 ?ㅽ뻾?⑸땲??
+## 정적 QA
+
+프로젝트 루트에서 다음 검증을 실행합니다.
 
 ```text
 node release/scripts/qa-static.mjs
 ```
 
-寃利???ぉ?먮뒗 Apps Script API ?곌껐, 以묐났 ?⑥닔, DOM ?곌껐, JavaScript 臾몃쾿, 30遺??⑥쐞 踰꾨┝ 洹쒖튃, ?댁쁺 ?ㅼ젙, PWA manifest, 紐⑤컮??硫뷀??곗씠?? Service Worker 罹먯떆 寃쎈줈 諛??ㅼ튂 ?꾩씠肄??ш린媛 ?ы븿?⑸땲??
+검증 항목에는 Apps Script API 연결, 중복 함수, DOM 연결, JavaScript 문법, 30분 단위 버림 규칙, 운영 설정, PWA manifest, 모바일 메타데이터, Service Worker 캐시 경로 및 설치 아이콘 크기가 포함됩니다.
 
-怨듯쑕???댁쁺 ?꾩뿉??Calendar 沅뚰븳 ?뱀씤怨?`installDailyHolidaySyncTrigger` ?ㅽ뻾???꾩슂?⑸땲?? 吏곸썝??洹쇳깭 ?섏젙 ?붿껌? 湲곗〈 `洹쇳깭 濡쒓렇`?먮쭔 ?묒닔?섎ŉ, 愿由ъ옄???붿껌???뺤씤????`洹쇳깭?꾪솴`???섎룞?쇰줈 諛섏쁺?⑸땲??
+공휴일 운영 전에는 Calendar 권한 승인과 `installDailyHolidaySyncTrigger` 실행이 필요합니다. 직원의 근태 수정 요청은 기존 `근태 로그`에만 접수되며, 관리자는 요청을 확인한 뒤 `근태현황`을 수동으로 반영합니다.
 
-## Release ?ㅼ젙 ?먭?
+## Release 설정 점검
 
 ```text
 node release/scripts/validate-release.mjs
@@ -21,22 +22,22 @@ node release/scripts/validate-release.mjs --platform=ios
 node release/scripts/validate-release.mjs --platform=android
 ```
 
-Firebase ?꾨줈?앺듃, Apple ?쒕챸, Google Play ?깅줉 ?뺣낫泥섎읆 ?ㅼ젣 怨꾩젙???꾩슂????ぉ? ?ㅼ젙 ?꾧퉴吏 `BLOCK`?쇰줈 ?쒖떆?????덉뒿?덈떎.
+Firebase 프로젝트, Apple 서명, Google Play 등록 정보처럼 실제 계정이 필요한 항목은 설정 전까지 `BLOCK`으로 표시될 수 있습니다.
 
-## PWA 諛고룷 ?쒖꽌
+## PWA 배포 순서
 
-1. `release/release-config.json`??踰꾩쟾怨?鍮뚮뱶 踰덊샇瑜??뺤씤?⑸땲??
-2. Firebase ?꾨줈?앺듃 ID? Web App ?ㅼ젙???낅젰?⑸땲??
-3. ?뺤쟻 QA媛 紐⑤몢 ?듦낵?섎뒗吏 ?뺤씤?⑸땲??
-4. Firebase CLI濡?Hosting留?諛고룷?⑸땲??
-5. Android Chrome怨?iPhone Safari?먯꽌 ?ㅼ튂 ??濡쒓렇?멸낵 異쒗눜洹??곌껐???ㅼ젣 湲곌린濡??뺤씤?⑸땲??
-6. 愿由ъ옄 ?붾㈃?먯꽌 ?섏젙 ?붿껌 紐⑸줉, 60珥??먮룞 媛깆떊, 吏곸썝 ?곸꽭李쎌쓣 ?뺤씤?⑸땲??
+1. `release/release-config.json`의 버전과 빌드 번호를 확인합니다.
+2. Firebase 프로젝트 ID와 Web App 설정을 입력합니다.
+3. 정적 QA가 모두 통과하는지 확인합니다.
+4. Firebase CLI로 Hosting만 배포합니다.
+5. Android Chrome과 iPhone Safari에서 설치 후 로그인과 출퇴근 연결을 실제 기기로 확인합니다.
+6. 관리자 화면에서 수정 요청 목록, 60초 자동 갱신, 직원 상세창을 확인합니다.
 
-PWA ?ㅼ튂??HTTPS Hosting 二쇱냼?먯꽌留??뺤긽 ?숈옉?⑸땲?? `file://` 二쇱냼??Apps Script ?몄쭛湲?誘몃━蹂닿린 二쇱냼???ㅼ튂???댁쁺 二쇱냼濡??ъ슜?섏? ?딆뒿?덈떎.
+PWA 설치는 HTTPS Hosting 주소에서만 정상 동작합니다. `file://` 주소나 Apps Script 편집기 미리보기 주소는 설치용 운영 주소로 사용하지 않습니다.
 
-## ?ъ슜??怨꾩젙???꾩슂???꾩냽 ?묒뾽
+## 사용자 계정이 필요한 후속 작업
 
-- Firebase ?꾨줈?앺듃 ?앹꽦 諛?Hosting 諛고룷
-- ?ㅼ젣 Android 湲곌린?먯꽌 Chrome ?ㅼ튂 ?뺤씤
-- ?ㅼ젣 iPhone?먯꽌 Safari ???붾㈃ 異붽? ?뺤씤
-- Apple Developer 諛?Google Play 怨꾩젙???ъ슜?섎뒗 ?ㅼ씠?곕툕 ?⑦궎吏??묒뾽
+- Firebase 프로젝트 생성 및 Hosting 배포
+- 실제 Android 기기에서 Chrome 설치 확인
+- 실제 iPhone에서 Safari 홈 화면 추가 확인
+- Apple Developer 및 Google Play 계정을 사용하는 네이티브 패키징 작업
