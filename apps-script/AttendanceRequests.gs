@@ -48,13 +48,17 @@ function submitAttendanceCorrectionRequest(request) {
     throw new Error('\uC694\uCCAD\uD55C \uB0A0\uC9DC\uC758 \uADFC\uD0DC \uD589\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.');
   }
 
+  const currentValue = getAttendanceRequestCurrentValue_(targetRow, input.kind);
+  if (attendanceRequestIsResolved_(targetRow, input.kind, input.requestedValue)) {
+    throw new Error('\uD604\uC7AC \uADFC\uD0DC \uAE30\uB85D\uACFC \uB3D9\uC77C\uD55C \uB0B4\uC6A9\uC785\uB2C8\uB2E4.');
+  }
+
   const attendanceRowsByEmployee = {};
   attendanceRowsByEmployee[employee.employeeId] = attendanceRows;
   if (findPendingAttendanceRequest_(ss, attendanceRowsByEmployee, employee.employeeId, input.targetDate, input.kind)) {
     throw new Error('\uAC19\uC740 \uB0A0\uC9DC\uC640 \uD56D\uBAA9\uC73C\uB85C \uC811\uC218\uB41C \uC694\uCCAD\uC774 \uC774\uBBF8 \uC788\uC2B5\uB2C8\uB2E4.');
   }
 
-  const currentValue = getAttendanceRequestCurrentValue_(targetRow, input.kind);
   appendAttendanceLog(ss, {
     dateText: input.targetDate,
     employeeId: employee.employeeId,
