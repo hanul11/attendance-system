@@ -12,6 +12,9 @@ const releaseConfig = JSON.parse(read("release/release-config.json"));
 const configSource = read("apps-script/Config.gs");
 const holidaySource = read("apps-script/HolidaySync.gs");
 const requestSource = read("apps-script/AttendanceRequests.gs");
+const capacitorConfig = JSON.parse(read("mobile/capacitor.config.json"));
+const appConfig = read("firebase/public/config/app-config.js");
+const firebaseMessagingServiceWorker = read("firebase/public/firebase-messaging-sw.js");
 const failures = [];
 const passes = [];
 
@@ -56,6 +59,15 @@ function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
 }
 
+function assertIncludes(name, value, expected) {
+  check(name, String(value).includes(expected), String(value));
+}
+
+assertIncludes("Capacitor app name", capacitorConfig.appName, "Hanul근태관리");
+assertIncludes("Firebase Hosting URL", appConfig, "hanul-logiflow-attendance.web.app");
+assertIncludes("Apps Script deployment URL", appConfig, "AKfycbwZdQADgY3SoYdTSCBhbDhhFcJpe5H8w84kDBkldoSUKcpcQgORYawg7e8WT9vr9Io");
+assertIncludes("Firebase background notification fallback title", firebaseMessagingServiceWorker, 'data.title || "Hanul근태관리"');
+
 function functionNames(source) {
   return [...source.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((match) => match[1]);
 }
@@ -73,6 +85,7 @@ try {
   const manifest = JSON.parse(read("firebase/public/manifest.webmanifest"));
   const pwaHtml = read("firebase/public/index.html");
   const serviceWorker = read("firebase/public/service-worker.js");
+  assertIncludes("PWA manifest app name", manifest.name, "Hanul근태관리");
   const expectedIcons = [
     ["firebase/public/assets/icons/icon-192.png", 192, 192],
     ["firebase/public/assets/icons/icon-512.png", 512, 512],
@@ -80,8 +93,8 @@ try {
     ["firebase/public/assets/icons/apple-touch-icon-180.png", 180, 180]
   ];
 
-  check("PWA app name", manifest.name === "?쒖슱 異쒗눜洹?湲곕줉", manifest.name);
-  check("PWA short name", manifest.short_name === "?쒖슱 洹쇳깭", manifest.short_name);
+  check("PWA app name", manifest.name === "Hanul근태관리", manifest.name);
+  check("PWA short name", manifest.short_name === "Hanul근태관리", manifest.short_name);
   check("PWA standalone mode", manifest.display === "standalone", manifest.display);
   check("PWA start URL", manifest.start_url === "/?source=pwa", manifest.start_url);
   check("PWA mobile metadata", [
@@ -210,7 +223,7 @@ const activeGpsSource = [
   read("firebase/public/index.html")
 ].join("\n");
 check("GPS-free active source", !/navigator\.geolocation|gpsDistanceM|gpsVerified|gpsLatitude|gpsLongitude|gpsLocations|LOGIFLOW_GPS_|allow=["']geolocation["']/i.test(activeGpsSource), "No active GPS permission, request, storage or configuration code");
-check("No attendance registration window", !/assertClockInRegistrationWindow|attendancePolicy|異쒓렐 ?깅줉 媛???쒓컙???꾨떃?덈떎/.test(activeGpsSource), "Clock-in and clock-out available 24 hours");
+check("No attendance registration window", !/assertClockInRegistrationWindow|attendancePolicy|출근 등록 가능 시간이 아닙니다/.test(activeGpsSource), "Clock-in and clock-out available 24 hours");
 check("Selected attendance time persistence", !/floorToHalfHour\s*\(\s*input\.actualAt\s*\)/.test(read("apps-script/Code.gs")) && /const savedAt = new Date\(input\.actualAt\)/.test(read("apps-script/Code.gs")), "Server stores selected time without flooring");
 
 try {
@@ -222,7 +235,7 @@ try {
   try {
     normalize({ employeeId: "2023068", type: "clockIn", actualAt: "2026-07-16T10:31:00+09:00" });
   } catch (error) {
-    invalidMinuteRejected = /30遺?.test(error.message);
+    invalidMinuteRejected = /30분/.test(error.message);
   }
   check("24-hour half-hour server policy", midnight.actualAt.getMinutes() === 0 && late.actualAt.getMinutes() === 30 && invalidMinuteRejected, "00:00 and 23:30 accepted; 10:31 rejected");
 } catch (error) {
@@ -261,7 +274,7 @@ try {
   try {
     operational.saveOperationalSettings({ adminEmployeeId: "1000001", notifications: {} });
   } catch (error) {
-    unauthorizedRejected = /愿由ъ옄/.test(error.message);
+    unauthorizedRejected = /관리자/.test(error.message);
   }
   check("Operational settings admin guard", unauthorizedRejected, "Non-admin save rejected");
 } catch (error) {
@@ -272,4 +285,3 @@ for (const result of passes) console.log(`[PASS] ${result.name}: ${result.detail
 for (const result of failures) console.error(`[FAIL] ${result.name}: ${result.detail}`);
 console.log(`${passes.length} passed, ${failures.length} failed`);
 if (failures.length) process.exitCode = 1;
-
