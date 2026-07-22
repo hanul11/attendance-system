@@ -24,7 +24,7 @@ if (firebaseConfigured) {
   firebase.messaging().onBackgroundMessage((payload) => {
     if (payload.notification) return;
     const data = payload.data || {};
-    self.registration.showNotification(data.title || "LOGIFLOW", {
+    self.registration.showNotification(data.title || "Hanul근태관리", {
       body: data.body || "근태 기록을 확인해 주세요.",
       icon: "/assets/icons/icon-192.png",
       badge: "/assets/icons/icon-192.png",
