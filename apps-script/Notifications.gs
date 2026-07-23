@@ -10,27 +10,37 @@ const NOTIFICATION_CONFIG = Object.freeze({
   })
 });
 
-function registerNotificationDevice(request) {
-  const input = request || {};
+function bindCurrentNotificationInstallation(payload) {
+  const installation = validateCurrentNotificationInstallation_(payload);
+  return postNotificationApi_('bindNotificationInstallation', {
+    installId: installation.installId,
+    employeeId: installation.employee.employeeId
+  });
+}
+
+function deactivateCurrentNotificationInstallation(payload) {
+  const installation = validateCurrentNotificationInstallation_(payload);
+  return postNotificationApi_('deactivateNotificationInstallation', {
+    installId: installation.installId,
+    employeeId: installation.employee.employeeId
+  });
+}
+
+function validateCurrentNotificationInstallation_(payload) {
+  const input = payload || {};
+  const installId = String(input.installId || '').trim();
   const employeeId = String(input.employeeId || '').trim();
-  const token = String(input.token || '').trim();
-  if (!employeeId || !token) {
-    throw new Error('알림 기기 정보를 확인해 주세요.');
+  if (!installId || !employeeId) {
+    throw new Error('Notification installation and employee ID are required.');
   }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
   const employee = findEmployeeById(ss, employeeId);
   if (!employee || employee.status !== LABELS.employed) {
-    throw new Error('재직 상태인 직원만 알림을 등록할 수 있습니다.');
+    throw new Error('Only active roster employees can manage notification installations.');
   }
 
-  return postNotificationApi_('registerNotificationDevice', {
-    employeeId: employeeId,
-    token: token,
-    preferences: normalizeNotificationPreferences_(input.preferences),
-    platform: String(input.platform || ''),
-    appVersion: String(input.appVersion || '')
-  });
+  return { installId: installId, employee: employee };
 }
 
 function updateNotificationPreferences(request) {

@@ -10,6 +10,8 @@ const serverSource = codeFiles.map(read).join("\n");
 const html = read("apps-script/Index.html");
 const releaseConfig = JSON.parse(read("release/release-config.json"));
 const configSource = read("apps-script/Config.gs");
+const codeSource = read("apps-script/Code.gs");
+const notificationSource = read("apps-script/Notifications.gs");
 const holidaySource = read("apps-script/HolidaySync.gs");
 const requestSource = read("apps-script/AttendanceRequests.gs");
 const capacitorConfig = JSON.parse(read("mobile/capacitor.config.json"));
@@ -54,6 +56,107 @@ check("Holiday map client state", /holidays:\s*\{\}/.test(html) && /function set
 check("Holiday-only calendar rows", /function mergeHolidayRowsForMonth/.test(html) && /mergeHolidayRowsForMonth\(monthRows,\s*year,\s*month\)/.test(html), "Every holiday in the selected month is rendered");
 check("Monthly holiday response binding", /setHolidayMap\(response\?\.holidays\s*\|\|\s*\{\}\)/.test(html), "Month changes refresh holiday data");
 check("Distinct attendance legend palette", ["#15803d", "#ea580c", "#7c3aed", "#2563eb", "#dc2626", "#64748b"].every((color) => html.includes(color)), "Six clearly separated status colors");
+
+const serverLoginSource = codeSource.match(/function login\(request\)[\s\S]*?(?=\nfunction changePassword)/)?.[0] || "";
+const clientLoginSource = html.match(/async function login\(\)[\s\S]*?(?=\n    async function forgotPassword)/)?.[0] || "";
+const clientLogoutSource = html.match(/async function logout\(\)[\s\S]*?(?=\n    function showToast)/)?.[0] || "";
+const clientBootstrapSource = html.match(/function bootstrap\(\)[\s\S]*?(?=\n    function csvCell)/)?.[0] || "";
+const notificationBindingSource = html.match(/function getNotificationPreferences\(\)[\s\S]*?(?=\n    function updateAutoLoginSetting)/)?.[0] || "";
+const nativeInstallIdSource = html.match(/function readNativeInstallId\(\)[\s\S]*?(?=\n    function bindCurrentNotificationInstallation)/)?.[0] || "";
+const queueNotificationBindSource = html.match(/function queueCurrentNotificationInstallationBind\(\)[\s\S]*?(?=\n    function queueCurrentNotificationInstallationCleanup)/)?.[0] || "";
+const queueNotificationCleanupSource = html.match(/function queueCurrentNotificationInstallationCleanup\(\)[\s\S]*?(?=\n    async function persistNotificationPreferences)/)?.[0] || "";
+const bindInstallationSource = notificationSource.match(/function bindCurrentNotificationInstallation\(payload\)[\s\S]*?(?=\nfunction deactivateCurrentNotificationInstallation)/)?.[0] || "";
+const deactivateInstallationSource = notificationSource.match(/function deactivateCurrentNotificationInstallation\(payload\)[\s\S]*?(?=\nfunction validateCurrentNotificationInstallation_)/)?.[0] || "";
+const validateInstallationSource = notificationSource.match(/function validateCurrentNotificationInstallation_\(payload\)[\s\S]*?(?=\nfunction updateNotificationPreferences)/)?.[0] || "";
+
+check(
+  "Native notification install ID location lookup",
+  /google\.script\.url\.getLocation\s*\(/.test(nativeInstallIdSource) && /parameter\?\.nativeInstallId/.test(nativeInstallIdSource),
+  "Read only nativeInstallId from the Apps Script URL location"
+);
+check(
+  "Native notification install ID single source",
+  [...html.matchAll(/state\.nativeInstallId\s*=/g)].length === 1
+    && [...html.matchAll(/parameter\?\.nativeInstallId/g)].length === 1
+    && !/(?:URLSearchParams|location\.(?:search|href)|document\.referrer)[^\n]*nativeInstallId|nativeInstallId[^\n]*(?:URLSearchParams|location\.(?:search|href)|document\.referrer)/.test(html),
+  "getLocation is the only source assigned to state.nativeInstallId"
+);
+check(
+  "Notification installation binds after successful login",
+  /state\.user\s*=\s*response\.user[\s\S]*queueCurrentNotificationInstallationBind\(\)/.test(clientLoginSource)
+    && /const employeeId = state\.user\?\.employeeId/.test(queueNotificationBindSource)
+    && !/queueCurrentNotificationInstallationBind/.test(clientBootstrapSource),
+  "Bind the URL installation only after state.user is populated by login"
+);
+check(
+  "Notification bind promise tracked and serialized",
+  /notificationBindPromise:\s*null/.test(html)
+    && /let notificationCleanupChain = Promise\.resolve\(\)/.test(html)
+    && /const previousCleanup = notificationCleanupChain/.test(queueNotificationBindSource)
+    && /state\.notificationBindPromise\s*=\s*previousCleanup/.test(queueNotificationBindSource)
+    && /notificationCleanupChain\s*=\s*previousCleanup/.test(queueNotificationCleanupSource),
+  "Track each bind Promise in state and start it after the shared cleanup chain"
+);
+check(
+  "Notification installation server bridge",
+  /function bindCurrentNotificationInstallation\(payload\)/.test(notificationSource)
+    && /function deactivateCurrentNotificationInstallation\(payload\)/.test(notificationSource)
+    && /postNotificationApi_\(['"]bindNotificationInstallation['"]/.test(notificationSource)
+    && /postNotificationApi_\(['"]deactivateNotificationInstallation['"]/.test(notificationSource),
+  "Apps Script bridge functions call Firebase installation endpoints"
+);
+check(
+  "Notification installation employee revalidation",
+  /validateCurrentNotificationInstallation_\(payload\)/.test(bindInstallationSource)
+    && /validateCurrentNotificationInstallation_\(payload\)/.test(deactivateInstallationSource)
+    && /findEmployeeById\(ss,\s*employeeId\)/.test(validateInstallationSource)
+    && /employee\.status\s*!==\s*LABELS\.employed/.test(validateInstallationSource)
+    && /employeeId:\s*installation\.employee\.employeeId/.test(bindInstallationSource)
+    && /employeeId:\s*installation\.employee\.employeeId/.test(deactivateInstallationSource),
+  "Employee roster identity and active status are checked before forwarding"
+);
+check(
+  "Notification bridge secret header",
+  /headers:\s*\{\s*['"]x-logiflow-secret['"]:\s*bridgeSecret\s*\}/.test(notificationSource),
+  "Existing Script Properties bridge secret is retained"
+);
+check(
+  "Notification installation deactivates without blocking logout",
+  /queueCurrentNotificationInstallationCleanup\(\);\s*performLogout\(\)/.test(clientLogoutSource)
+    && !/await\s+queueCurrentNotificationInstallationCleanup/.test(clientLogoutSource),
+  "Queue remote cleanup and complete local logout immediately"
+);
+check(
+  "Notification logout cleanup ordering",
+  /const employeeId = state\.user\?\.employeeId/.test(queueNotificationCleanupSource)
+    && /const installId = state\.nativeInstallId/.test(queueNotificationCleanupSource)
+    && /const pendingBind = state\.notificationBindPromise/.test(queueNotificationCleanupSource)
+    && /const previousCleanup = notificationCleanupChain/.test(queueNotificationCleanupSource)
+    && queueNotificationCleanupSource.indexOf("return installIdReady") < queueNotificationCleanupSource.indexOf("Promise.resolve(pendingBind)")
+    && queueNotificationCleanupSource.indexOf("Promise.resolve(pendingBind)") < queueNotificationCleanupSource.indexOf("deactivateCurrentNotificationInstallation"),
+  "Resolve nativeInstallId, settle the pending bind, then deactivate captured IDs"
+);
+check(
+  "Notification preferences keep Apps Script server path",
+  /callServer\(['"]updateNotificationPreferences['"]/.test(notificationBindingSource)
+    && /persistNotificationPreferences\(\)\.catch/.test(notificationBindingSource),
+  "Personal toggles persist through updateNotificationPreferences"
+);
+check(
+  "Legacy notification iframe bridge removed",
+  !/window\.parent\.postMessage|handleNotificationHostMessage|requestNotificationRegistration|registerNotificationDevice/.test(html)
+    && !/function registerNotificationDevice\(/.test(notificationSource),
+  "No iframe or postMessage notification registration remains in Apps Script HTML"
+);
+check(
+  "Login roster verification contract",
+  /SpreadsheetApp\.openById\(CONFIG\.spreadsheetId\)/.test(serverLoginSource)
+    && /findEmployeeById\(ss,\s*employeeId\)/.test(serverLoginSource)
+    && /if\s*\(!employee\)/.test(serverLoginSource)
+    && /employee\.status\s*!==\s*LABELS\.employed/.test(serverLoginSource)
+    && !/nativeInstallId|bindCurrentNotificationInstallation/.test(serverLoginSource),
+  "Existing employee lookup and employed-status login checks remain isolated"
+);
 
 function check(name, condition, detail) {
   (condition ? passes : failures).push({ name, detail });
