@@ -3,17 +3,26 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const {
+  createBridgeAuthorizer,
+  createJsonPostHandler,
+  createNotificationInstallationService,
+  selectDeliverableInstallations
+} = require("./lib/device-registration");
 
 initializeApp();
 
 const bridgeSecret = defineSecret("LOGIFLOW_BRIDGE_SECRET");
+const auth = getAuth();
 const db = getFirestore();
 const messaging = getMessaging();
 const REGION = "asia-northeast3";
 const MAX_MULTICAST_TOKENS = 500;
 const FIRESTORE_IN_QUERY_LIMIT = 30;
+const INSTALLATIONS_COLLECTION = "notificationInstallations";
 
 const NOTIFICATION_DEFINITIONS = Object.freeze({
   CHECKIN_NOTICE: Object.freeze({
@@ -60,23 +69,90 @@ function getDeviceId(token) {
   return require("crypto").createHash("sha256").update(token).digest("hex");
 }
 
+const installationService = createNotificationInstallationService({
+  verifyIdToken: (idToken) => auth.verifyIdToken(idToken),
+  runInstallationTransaction: (installId, operation) => db.runTransaction(async (transaction) => {
+    const installationReference = db.collection(INSTALLATIONS_COLLECTION).doc(installId);
+    const installationSnapshot = await transaction.get(installationReference);
+    const outcome = await operation({
+      installation: installationSnapshot.exists ? installationSnapshot.data() : null,
+      getEmployeePreferences: async (employeeId) => {
+        const userReference = db.collection("notificationUsers").doc(employeeId);
+        const userSnapshot = await transaction.get(userReference);
+        return userSnapshot.exists ? userSnapshot.data().preferences : null;
+      }
+    });
+    transaction.set(installationReference, outcome.update, { merge: true });
+    return outcome.result;
+  }),
+  setEmployeePreferences: async (employeeId, preferences, updatedAt) => {
+    const userReference = db.collection("notificationUsers").doc(employeeId);
+    const [legacyDevices, installations] = await Promise.all([
+      userReference.collection("devices").get(),
+      db.collection(INSTALLATIONS_COLLECTION).where("employeeId", "==", employeeId).get()
+    ]);
+    const batch = db.batch();
+    batch.set(userReference, { employeeId, preferences, updatedAt }, { merge: true });
+    legacyDevices.docs.forEach((document) => {
+      batch.set(document.ref, { preferences, updatedAt }, { merge: true });
+    });
+    installations.docs.forEach((document) => {
+      batch.set(document.ref, { preferences, updatedAt }, { merge: true });
+    });
+    await batch.commit();
+  },
+  now: () => FieldValue.serverTimestamp()
+});
+
+const authorizeBridgeRequest = createBridgeAuthorizer(() => bridgeSecret.value());
+const registerInstallationHandler = createJsonPostHandler({
+  action: (input) => installationService.register(input),
+  mapRequest: (request) => ({
+    authorization: request.get("authorization"),
+    body: request.body || {}
+  })
+});
+const bindInstallationHandler = createJsonPostHandler({
+  authorize: authorizeBridgeRequest,
+  action: (input) => installationService.bind(input)
+});
+const deactivateInstallationHandler = createJsonPostHandler({
+  authorize: authorizeBridgeRequest,
+  action: (input) => installationService.deactivate(input)
+});
+const updatePreferencesHandler = createJsonPostHandler({
+  authorize: authorizeBridgeRequest,
+  action: (input) => installationService.updatePreferences(input)
+});
+
 async function collectDevices(employeeIds, preferenceKey) {
   const snapshots = [];
+  const employeePreferencesById = {};
   for (let offset = 0; offset < employeeIds.length; offset += FIRESTORE_IN_QUERY_LIMIT) {
     const employeeIdBatch = employeeIds.slice(offset, offset + FIRESTORE_IN_QUERY_LIMIT);
-    snapshots.push(await db.collectionGroup("devices").where("employeeId", "in", employeeIdBatch).get());
+    const userReferences = employeeIdBatch.map((employeeId) => (
+      db.collection("notificationUsers").doc(employeeId)
+    ));
+    const [legacyDevices, installations, userSnapshots] = await Promise.all([
+      db.collectionGroup("devices").where("employeeId", "in", employeeIdBatch).get(),
+      db.collection(INSTALLATIONS_COLLECTION).where("employeeId", "in", employeeIdBatch).get(),
+      db.getAll(...userReferences)
+    ]);
+    snapshots.push(legacyDevices, installations);
+    userSnapshots.forEach((snapshot) => {
+      const data = snapshot.exists ? snapshot.data() : null;
+      employeePreferencesById[snapshot.id] = data ? data.preferences : null;
+    });
   }
-  const devices = [];
+  const installations = [];
 
   snapshots.forEach((snapshot) => {
     snapshot.docs.forEach((document) => {
       const data = document.data();
-      if (data.active !== false && data.token && data.preferences?.[preferenceKey] !== false) {
-        devices.push({ reference: document.ref, token: data.token });
-      }
+      installations.push({ ...data, reference: document.ref });
     });
   });
-  return devices;
+  return selectDeliverableInstallations(installations, preferenceKey, employeePreferencesById);
 }
 
 async function sendBatches(devices, definition, notificationKey) {
@@ -160,23 +236,22 @@ exports.registerNotificationDevice = onRequest({ region: REGION, secrets: [bridg
   return response.json({ ok: true });
 });
 
-exports.updateNotificationPreferences = onRequest({ region: REGION, secrets: [bridgeSecret] }, async (request, response) => {
-  if (request.method !== "POST") return response.status(405).json({ ok: false, error: "METHOD_NOT_ALLOWED" });
-  if (!requireBridgeAuthorization(request, response)) return;
+exports.registerNotificationInstallation = onRequest({ region: REGION, cors: true }, registerInstallationHandler);
 
-  const body = request.body || {};
-  const employeeId = String(body.employeeId || "").trim();
-  if (!employeeId) return response.status(400).json({ ok: false, error: "INVALID_EMPLOYEE" });
+exports.bindNotificationInstallation = onRequest(
+  { region: REGION, secrets: [bridgeSecret] },
+  bindInstallationHandler
+);
 
-  const preferences = normalizePreferences(body.preferences);
-  const userReference = db.collection("notificationUsers").doc(employeeId);
-  const devices = await userReference.collection("devices").get();
-  const batch = db.batch();
-  batch.set(userReference, { employeeId, preferences, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  devices.docs.forEach((document) => batch.set(document.ref, { preferences, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
-  await batch.commit();
-  return response.json({ ok: true });
-});
+exports.deactivateNotificationInstallation = onRequest(
+  { region: REGION, secrets: [bridgeSecret] },
+  deactivateInstallationHandler
+);
+
+exports.updateNotificationPreferences = onRequest(
+  { region: REGION, secrets: [bridgeSecret] },
+  updatePreferencesHandler
+);
 
 exports.dispatchAttendanceNotification = onRequest({ region: REGION, secrets: [bridgeSecret], timeoutSeconds: 120 }, async (request, response) => {
   if (request.method !== "POST") return response.status(405).json({ ok: false, error: "METHOD_NOT_ALLOWED" });
