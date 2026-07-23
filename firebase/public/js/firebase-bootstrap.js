@@ -71,6 +71,8 @@
           config: config,
           app: app,
           auth: authModule ? authModule.getAuth(app) : null,
+          signInAnonymously: authModule ? authModule.signInAnonymously : null,
+          getIdToken: authModule ? authModule.getIdToken : null,
           firestore: firestoreModule ? firestoreModule.getFirestore(app) : null,
           messagingEnabled: messagingSupported,
           messaging: messagingSupported ? messagingModule.getMessaging(app) : null,
@@ -81,6 +83,22 @@
     }
 
     return servicesPromise;
+  }
+
+  async function getAnonymousIdToken() {
+    const services = await loadServices();
+    if (!services.enabled) return services;
+    if (!services.auth || !services.signInAnonymously || !services.getIdToken) {
+      return { enabled: false, reason: "authentication-not-configured" };
+    }
+
+    const credential = services.auth.currentUser
+      ? { user: services.auth.currentUser }
+      : await services.signInAnonymously(services.auth);
+    const idToken = await services.getIdToken(credential.user);
+    return idToken
+      ? { enabled: true, idToken: idToken }
+      : { enabled: false, reason: "id-token-unavailable" };
   }
 
   async function getRegistrationToken(serviceWorkerRegistration) {
@@ -109,9 +127,14 @@
   window.LOGIFLOW_FIREBASE = Object.freeze({
     initialize: loadServices,
     getServices: loadServices,
+    getAnonymousIdToken: getAnonymousIdToken,
     getRegistrationToken: getRegistrationToken,
     listenForeground: listenForeground,
     isConfigured: function () {
+      const config = getConfig();
+      return hasBaseConfig(config) && featureEnabled(config, "authentication");
+    },
+    isWebMessagingConfigured: function () {
       return hasMessagingConfig(getConfig());
     }
   });

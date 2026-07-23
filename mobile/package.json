@@ -13,6 +13,7 @@
     "open:android": "cap open android",
     "open:ios": "cap open ios",
     "qa:static": "node ../release/scripts/qa-static.mjs",
+    "qa:notifications": "node ../release/scripts/qa-notification-client.mjs",
     "release:check": "node ../release/scripts/validate-release.mjs",
     "release:check:ios": "node ../release/scripts/validate-release.mjs --platform=ios",
     "release:check:android": "node ../release/scripts/validate-release.mjs --platform=android",

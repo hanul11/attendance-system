@@ -13,5 +13,6 @@ globalThis.LOGIFLOW_FIREBASE_CONFIG = Object.freeze({
   storageBucket: "YOUR_FIREBASE_PROJECT_ID.firebasestorage.app",
   messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
   appId: "YOUR_FIREBASE_APP_ID",
-  vapidKey: "YOUR_FIREBASE_WEB_PUSH_VAPID_KEY"
+  vapidKey: "YOUR_FIREBASE_WEB_PUSH_VAPID_KEY",
+  registrationUrl: "https://asia-northeast3-YOUR_FIREBASE_PROJECT_ID.cloudfunctions.net/registerNotificationInstallation"
 });

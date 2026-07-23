@@ -1,177 +1,169 @@
-(function (window, document) {
+(function (window) {
   "use strict";
 
-  const MESSAGE_VERSION = 1;
-  let appFrame = null;
-  let appTargetOrigin = "*";
-  let serviceWorkerRegistration = null;
-  let pendingRequest = null;
+  const INSTALL_ID_KEY = "logiflow.nativeInstallId";
+  const REGISTRATION_TIMEOUT_MS = 4000;
+  let memoryInstallId = null;
 
-  function isTrustedOrigin(origin) {
-    const trusted = window.LOGIFLOW_APP_CONFIG?.trustedAppOrigins || [];
-    return trusted.includes(origin);
+  function withTimeout(operation, state) {
+    let timeoutId = null;
+    const timeout = new Promise(function (resolve) {
+      timeoutId = window.setTimeout(function () {
+        state.active = false;
+        resolve(null);
+      }, REGISTRATION_TIMEOUT_MS);
+    });
+    const result = Promise.resolve().then(operation).catch(function () {
+      return null;
+    });
+    return Promise.race([result, timeout]).finally(function () {
+      window.clearTimeout(timeoutId);
+    });
   }
 
-  function postToApp(type, payload) {
-    if (!appFrame?.contentWindow) return;
-    appFrame.contentWindow.postMessage({
-      source: "logiflow-host",
-      version: MESSAGE_VERSION,
-      type: type,
-      payload: payload || {}
-    }, appTargetOrigin);
+  function getFirebaseConfig() {
+    return window.LOGIFLOW_FIREBASE_CONFIG || {};
   }
 
-  function normalizePreferences(preferences) {
-    const source = preferences || {};
-    return {
-      checkin: source.checkin !== false,
-      checkout: source.checkout !== false
-    };
+  function isRegistrationUrlConfigured(value) {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.href.includes("YOUR_");
+    } catch (error) {
+      return false;
+    }
   }
 
-  function setPermissionPromptVisible(visible) {
-    const prompt = document.getElementById("notificationPermissionPrompt");
-    if (prompt) prompt.hidden = !visible;
+  function isNativePlatform() {
+    return window.Capacitor?.isNativePlatform?.() === true;
   }
 
   function getNativeMessagingPlugin() {
+    if (!isNativePlatform()) return null;
     return window.Capacitor?.Plugins?.FirebaseMessaging || null;
   }
 
-  async function issueNativeToken(request, plugin) {
+  function readInstallId() {
+    try {
+      return window.localStorage?.getItem(INSTALL_ID_KEY) || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeInstallId(value) {
+    try {
+      window.localStorage?.setItem(INSTALL_ID_KEY, value);
+    } catch (error) {
+      return;
+    }
+  }
+
+  function getOrCreateInstallId() {
+    if (memoryInstallId) return memoryInstallId;
+    const stored = readInstallId();
+    if (stored) {
+      memoryInstallId = stored;
+      return stored;
+    }
+    if (typeof window.crypto?.randomUUID !== "function") return null;
+    memoryInstallId = window.crypto.randomUUID();
+    writeInstallId(memoryInstallId);
+    return memoryInstallId;
+  }
+
+  async function getNativeToken(plugin) {
     let permission = await plugin.checkPermissions();
-    if (permission.receive === "prompt") {
+    if (["prompt", "prompt-with-rationale"].includes(permission?.receive)) {
       permission = await plugin.requestPermissions();
     }
-    if (permission.receive !== "granted") {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "permission-denied" });
-      return;
-    }
-
+    if (permission?.receive !== "granted") return null;
     const result = await plugin.getToken();
-    if (!result?.token) {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "token-unavailable" });
-      return;
-    }
-
-    postToApp("LOGIFLOW_NOTIFICATION_TOKEN", {
-      employeeId: request.employeeId,
-      token: result.token,
-      preferences: normalizePreferences(request.preferences),
-      platform: window.Capacitor?.getPlatform?.() || "native",
-      appVersion: window.LOGIFLOW_APP_CONFIG?.version || "unknown"
-    });
+    return result?.token || null;
   }
 
-  async function issueToken(request) {
-    const preferences = normalizePreferences(request.preferences);
-    if (!preferences.checkin && !preferences.checkout) {
-      postToApp("LOGIFLOW_NOTIFICATION_PREFERENCES", {
-        employeeId: request.employeeId,
-        preferences: preferences
+  function supportsWebPush() {
+    return Boolean(
+      "Notification" in window &&
+      "serviceWorker" in window.navigator &&
+      window.LOGIFLOW_FIREBASE?.isWebMessagingConfigured?.()
+    );
+  }
+
+  async function getWebToken(options) {
+    if (!supportsWebPush()) return null;
+    let permission = window.Notification.permission;
+    if (permission === "default" && options.userInitiated === true) {
+      permission = await window.Notification.requestPermission();
+    }
+    if (permission !== "granted") return null;
+    const registration = options.serviceWorkerRegistration || await window.navigator.serviceWorker.ready;
+    const result = await window.LOGIFLOW_FIREBASE.getRegistrationToken(registration);
+    return result?.enabled ? result.token || null : null;
+  }
+
+  async function registerInstallation(input) {
+    const config = getFirebaseConfig();
+    const response = await window.fetch(config.registrationUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + input.idToken
+      },
+      body: JSON.stringify({
+        installId: input.installId,
+        token: input.token,
+        platform: input.platform,
+        appVersion: window.LOGIFLOW_APP_CONFIG?.version || "unknown"
+      })
+    });
+    if (!response.ok) throw new Error("Notification installation registration failed");
+  }
+
+  async function registerWithinTimeout(options, state) {
+    try {
+      const config = getFirebaseConfig();
+      if (!window.LOGIFLOW_FIREBASE?.isConfigured?.()) return null;
+      if (!isRegistrationUrlConfigured(config.registrationUrl)) return null;
+
+      const native = isNativePlatform();
+      const nativeMessaging = getNativeMessagingPlugin();
+      if (native && !nativeMessaging) return null;
+      if (!native && !supportsWebPush()) return null;
+
+      const authentication = await window.LOGIFLOW_FIREBASE.getAnonymousIdToken();
+      if (!state.active) return null;
+      if (!authentication?.enabled || !authentication.idToken) return null;
+
+      const launchOptions = options || {};
+      const token = native
+        ? await getNativeToken(nativeMessaging)
+        : await getWebToken(launchOptions);
+      if (!state.active) return null;
+      if (!token) return null;
+
+      const installId = getOrCreateInstallId();
+      if (!installId) return null;
+      await registerInstallation({
+        idToken: authentication.idToken,
+        installId: installId,
+        token: token,
+        platform: native ? window.Capacitor.getPlatform() : "web"
       });
-      return;
-    }
-
-    const nativeMessaging = getNativeMessagingPlugin();
-    if (nativeMessaging) {
-      await issueNativeToken(request, nativeMessaging);
-      return;
-    }
-
-    if (!window.LOGIFLOW_FIREBASE?.isConfigured()) {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "not-configured" });
-      return;
-    }
-
-    if (!("Notification" in window)) {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "not-supported" });
-      return;
-    }
-
-    if (Notification.permission === "default") {
-      pendingRequest = request;
-      setPermissionPromptVisible(true);
-      return;
-    }
-
-    if (Notification.permission !== "granted") {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "permission-denied" });
-      return;
-    }
-
-    const result = await window.LOGIFLOW_FIREBASE.getRegistrationToken(serviceWorkerRegistration);
-    if (!result.enabled || !result.token) {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: result.reason || "token-unavailable" });
-      return;
-    }
-
-    postToApp("LOGIFLOW_NOTIFICATION_TOKEN", {
-      employeeId: request.employeeId,
-      token: result.token,
-      preferences: preferences,
-      platform: navigator.userAgent,
-      appVersion: window.LOGIFLOW_APP_CONFIG?.version || "unknown"
-    });
-  }
-
-  async function requestPermissionFromPrompt() {
-    setPermissionPromptVisible(false);
-    const request = pendingRequest;
-    pendingRequest = null;
-    if (!request) return;
-
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "permission-denied" });
-      return;
-    }
-    await issueToken(request);
-  }
-
-  function handleMessage(event) {
-    if (!appFrame || event.source !== appFrame.contentWindow || !isTrustedOrigin(event.origin)) return;
-    appTargetOrigin = event.origin;
-    const message = event.data || {};
-    if (message.source !== "logiflow-app" || message.version !== MESSAGE_VERSION) return;
-
-    if (message.type === "LOGIFLOW_NOTIFICATION_REGISTER") {
-      issueToken(message.payload || {}).catch(function () {
-        postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "registration-failed" });
-      });
+      return state.active ? installId : null;
+    } catch (error) {
+      return null;
     }
   }
 
-  function attach(frame, registration) {
-    appFrame = frame;
-    serviceWorkerRegistration = registration;
-    postToApp("LOGIFLOW_NOTIFICATION_READY", {
-      configured: Boolean(window.LOGIFLOW_FIREBASE?.isConfigured()),
-      version: window.LOGIFLOW_APP_CONFIG?.version || "unknown",
-      buildNumber: window.LOGIFLOW_APP_CONFIG?.buildNumber || "unknown"
-    });
-
-    window.LOGIFLOW_FIREBASE?.listenForeground(function (payload) {
-      postToApp("LOGIFLOW_NOTIFICATION_FOREGROUND", payload?.data || {});
-    }).catch(function () { return null; });
-
-    const nativeMessaging = getNativeMessagingPlugin();
-    nativeMessaging?.addListener("notificationReceived", function (event) {
-      postToApp("LOGIFLOW_NOTIFICATION_FOREGROUND", event?.notification?.data || {});
-    });
+  function registerForLaunch(options) {
+    const state = { active: true };
+    return withTimeout(function () {
+      return registerWithinTimeout(options, state);
+    }, state);
   }
 
-  window.addEventListener("message", handleMessage);
-  document.getElementById("notificationPermissionBtn")?.addEventListener("click", function () {
-    requestPermissionFromPrompt().catch(function () {
-      postToApp("LOGIFLOW_NOTIFICATION_STATUS", { status: "permission-failed" });
-    });
+  window.LOGIFLOW_NOTIFICATION_SERVICE = Object.freeze({
+    registerForLaunch: registerForLaunch
   });
-  document.getElementById("notificationPermissionCancelBtn")?.addEventListener("click", function () {
-    pendingRequest = null;
-    setPermissionPromptVisible(false);
-  });
-
-  window.LOGIFLOW_NOTIFICATION_SERVICE = Object.freeze({ attach: attach });
-})(window, document);
+})(window);
