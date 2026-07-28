@@ -273,6 +273,8 @@ try {
   const half = utilities.floorToHalfHour(new Date(2026, 6, 15, 8, 30));
   check("30-minute floor rule", early.getHours() === 8 && early.getMinutes() === 0 && half.getMinutes() === 30, "08:29 -> 08:00, 08:30 -> 08:30");
   check("Work-time calculation", utilities.computeWorkMinutes("9:00", "18:00") === 480, "09:00-18:00 minus 60 minutes = 480 minutes");
+  check("Overnight work-time at midnight", utilities.computeWorkMinutes("9:00", "0:00") === 810, "09:00-00:00 minus 90 minutes = 810 minutes");
+  check("Overnight work-time at 03:00", utilities.computeWorkMinutes("9:00", "3:00") === 990, "09:00-03:00 minus 90 minutes = 990 minutes");
 } catch (error) {
   check("Attendance utility checks", false, error.message);
 }
@@ -308,12 +310,19 @@ try {
 
 try {
   const helperSource = html.match(/function ceilToHalfHour[\s\S]*?(?=\n    function formatAttendanceChoiceTime)/)?.[0] || "";
-  const buildChoices = new Function(helperSource + "; return buildAttendanceTimeChoices;")();
-  const choiceText = (date) => buildChoices(date).map((value) => `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`);
-  check("Attendance choices at 10:58", JSON.stringify(choiceText(new Date(2026, 6, 16, 10, 58))) === JSON.stringify(["10:30", "11:00", "11:30"]), "10:30 / 11:00 / 11:30");
-  check("Attendance choices at 18:12", JSON.stringify(choiceText(new Date(2026, 6, 16, 18, 12))) === JSON.stringify(["18:00", "18:30", "19:00"]), "18:00 / 18:30 / 19:00");
-  const midnightChoices = buildChoices(new Date(2026, 6, 16, 23, 58));
-  check("Attendance choices across midnight", midnightChoices[0].getDate() === 16 && midnightChoices[1].getDate() === 17 && midnightChoices[2].getDate() === 17, "23:30 / next day 00:00 / 00:30");
+  const helpers = new Function(helperSource + "; return { ceilToHalfHour, isAttendanceTimeAllowed };")();
+  const choiceText = (date) => {
+    const value = helpers.ceilToHalfHour(date);
+    return `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+  };
+  check("Attendance default at 08:12", choiceText(new Date(2026, 6, 16, 8, 12)) === "08:30", "08:12 -> 08:30");
+  check("Attendance default at 08:20", choiceText(new Date(2026, 6, 16, 8, 20)) === "08:30", "08:20 -> 08:30");
+  check("Attendance default at 08:48", choiceText(new Date(2026, 6, 16, 8, 48)) === "09:00", "08:48 -> 09:00");
+  const midnightDefault = helpers.ceilToHalfHour(new Date(2026, 6, 16, 23, 50));
+  check("Attendance default across midnight", midnightDefault.getDate() === 17 && choiceText(new Date(2026, 6, 16, 23, 50)) === "00:00", "23:50 -> next day 00:00");
+  const openedAt = new Date(2026, 6, 16, 8, 12);
+  check("Attendance future limit accepts 30 minutes", helpers.isAttendanceTimeAllowed(new Date(openedAt.getTime() + 30 * 60000), openedAt), "+30 minutes accepted");
+  check("Attendance future limit rejects over 30 minutes", !helpers.isAttendanceTimeAllowed(new Date(openedAt.getTime() + 31 * 60000), openedAt), "+31 minutes rejected");
 } catch (error) {
   check("Attendance time choice checks", false, error.message);
 }

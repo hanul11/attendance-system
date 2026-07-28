@@ -34,9 +34,17 @@ function parseIsoDateText(value) {
 
 function computeWorkMinutes(clockInText, clockOutText) {
   const clockIn = parseTimeToMinutes(clockInText);
-  const clockOut = parseTimeToMinutes(clockOutText);
+  let clockOut = parseTimeToMinutes(clockOutText);
 
-  if (clockIn === null || clockOut === null || clockOut <= clockIn) {
+  if (clockIn === null || clockOut === null) {
+    return 0;
+  }
+
+  if (clockOut < clockIn || (clockOut === 0 && clockIn > 0)) {
+    clockOut += 24 * 60;
+  }
+
+  if (clockOut <= clockIn) {
     return 0;
   }
 
@@ -90,6 +98,13 @@ function floorToHalfHour(dateValue) {
 
 function timeToSheetSerial(dateValue) {
   return (dateValue.getHours() * 60 + dateValue.getMinutes()) / 1440;
+}
+
+function timeToAttendanceSheetSerial(dateValue, workDate) {
+  const selectedDay = stripTime(dateValue).getTime();
+  const attendanceDay = stripTime(workDate || dateValue).getTime();
+  const dayOffset = Math.max(0, Math.round((selectedDay - attendanceDay) / (24 * 60 * 60 * 1000)));
+  return dayOffset + timeToSheetSerial(dateValue);
 }
 
 function stripTime(dateValue) {
