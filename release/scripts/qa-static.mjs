@@ -268,13 +268,16 @@ try {
 }
 
 try {
-  const utilities = new Function(read("apps-script/Utils.gs") + "; return { floorToHalfHour, computeWorkMinutes };")();
+  const utilities = new Function(read("apps-script/Utils.gs") + "; return { floorToHalfHour, computeWorkMinutes, timeToAttendanceSheetSerial };")();
   const early = utilities.floorToHalfHour(new Date(2026, 6, 15, 8, 29));
   const half = utilities.floorToHalfHour(new Date(2026, 6, 15, 8, 30));
   check("30-minute floor rule", early.getHours() === 8 && early.getMinutes() === 0 && half.getMinutes() === 30, "08:29 -> 08:00, 08:30 -> 08:30");
   check("Work-time calculation", utilities.computeWorkMinutes("9:00", "18:00") === 480, "09:00-18:00 minus 60 minutes = 480 minutes");
   check("Overnight work-time at midnight", utilities.computeWorkMinutes("9:00", "0:00") === 810, "09:00-00:00 minus 90 minutes = 810 minutes");
   check("Overnight work-time at 03:00", utilities.computeWorkMinutes("9:00", "3:00") === 990, "09:00-03:00 minus 90 minutes = 990 minutes");
+  const workDate = new Date(2026, 6, 16, 9, 0);
+  check("Overnight sheet serial at midnight", utilities.timeToAttendanceSheetSerial(new Date(2026, 6, 17, 0, 0), workDate) === 1, "Next-day 00:00 stored as 1.0");
+  check("Overnight sheet serial at 03:00", utilities.timeToAttendanceSheetSerial(new Date(2026, 6, 17, 3, 0), workDate) === 1.125, "Next-day 03:00 stored as 1.125");
 } catch (error) {
   check("Attendance utility checks", false, error.message);
 }
@@ -320,9 +323,9 @@ try {
   check("Attendance default at 08:48", choiceText(new Date(2026, 6, 16, 8, 48)) === "09:00", "08:48 -> 09:00");
   const midnightDefault = helpers.ceilToHalfHour(new Date(2026, 6, 16, 23, 50));
   check("Attendance default across midnight", midnightDefault.getDate() === 17 && choiceText(new Date(2026, 6, 16, 23, 50)) === "00:00", "23:50 -> next day 00:00");
-  const openedAt = new Date(2026, 6, 16, 8, 12);
-  check("Attendance future limit accepts 30 minutes", helpers.isAttendanceTimeAllowed(new Date(openedAt.getTime() + 30 * 60000), openedAt), "+30 minutes accepted");
-  check("Attendance future limit rejects over 30 minutes", !helpers.isAttendanceTimeAllowed(new Date(openedAt.getTime() + 31 * 60000), openedAt), "+31 minutes rejected");
+  const boundaryOpenedAt = new Date(2026, 6, 16, 8, 0);
+  check("Attendance future limit accepts 30 minutes", helpers.isAttendanceTimeAllowed(new Date(2026, 6, 16, 8, 30), boundaryOpenedAt), "08:00 -> 08:30 accepted");
+  check("Attendance future limit rejects over 30 minutes", !helpers.isAttendanceTimeAllowed(new Date(2026, 6, 16, 9, 0), boundaryOpenedAt), "08:00 -> 09:00 rejected");
 } catch (error) {
   check("Attendance time choice checks", false, error.message);
 }
@@ -337,6 +340,7 @@ const activeGpsSource = [
 check("GPS-free active source", !/navigator\.geolocation|gpsDistanceM|gpsVerified|gpsLatitude|gpsLongitude|gpsLocations|LOGIFLOW_GPS_|allow=["']geolocation["']/i.test(activeGpsSource), "No active GPS permission, request, storage or configuration code");
 check("No attendance registration window", !/assertClockInRegistrationWindow|attendancePolicy|출근 등록 가능 시간이 아닙니다/.test(activeGpsSource), "Clock-in and clock-out available 24 hours");
 check("Selected attendance time persistence", !/floorToHalfHour\s*\(\s*input\.actualAt\s*\)/.test(read("apps-script/Code.gs")) && /const savedAt = new Date\(input\.actualAt\)/.test(read("apps-script/Code.gs")), "Server stores selected time without flooring");
+check("Overnight checkout row resolution", /resolveAttendanceTarget_\(attendanceSheet, employeeBlock, input\.type, savedAt\)/.test(read("apps-script/Code.gs")) && /previousWorkDate\.setDate\(previousWorkDate\.getDate\(\) - 1\)/.test(read("apps-script/Code.gs")), "Checkout can reuse the previous open attendance row");
 
 try {
   const normalizeSource = read("apps-script/Code.gs").match(/function normalizeAttendanceRequest[\s\S]*?(?=\nfunction readRosterEmployees)/)?.[0] || "";
