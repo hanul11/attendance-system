@@ -40,7 +40,8 @@ function computeWorkMinutes(clockInText, clockOutText) {
     return 0;
   }
 
-  if (clockOut < clockIn || (clockOut === 0 && clockIn > 0)) {
+  const overnight = clockOut < clockIn || (clockOut === 0 && clockIn > 0);
+  if (overnight) {
     clockOut += 24 * 60;
   }
 
@@ -48,7 +49,10 @@ function computeWorkMinutes(clockInText, clockOutText) {
     return 0;
   }
 
-  const breakMinutes = clockOut >= (18 * 60 + 30) ? 90 : 60;
+  const nextDayClockOut = clockOut - 24 * 60;
+  const breakMinutes = overnight
+    ? (nextDayClockOut >= (6 * 60 + 30) ? 90 : 60)
+    : (clockOut >= (18 * 60 + 30) ? 90 : 60);
   return Math.max(0, clockOut - clockIn - breakMinutes);
 }
 

@@ -272,9 +272,13 @@ try {
   const early = utilities.floorToHalfHour(new Date(2026, 6, 15, 8, 29));
   const half = utilities.floorToHalfHour(new Date(2026, 6, 15, 8, 30));
   check("30-minute floor rule", early.getHours() === 8 && early.getMinutes() === 0 && half.getMinutes() === 30, "08:29 -> 08:00, 08:30 -> 08:30");
-  check("Work-time calculation", utilities.computeWorkMinutes("9:00", "18:00") === 480, "09:00-18:00 minus 60 minutes = 480 minutes");
-  check("Overnight work-time at midnight", utilities.computeWorkMinutes("9:00", "0:00") === 810, "09:00-00:00 minus 90 minutes = 810 minutes");
-  check("Overnight work-time at 03:00", utilities.computeWorkMinutes("9:00", "3:00") === 990, "09:00-03:00 minus 90 minutes = 990 minutes");
+  check("Day work before extra break", utilities.computeWorkMinutes("9:00", "18:00") === 480, "09:00-18:00 minus 60 minutes = 480 minutes");
+  check("Day work at extra break boundary", utilities.computeWorkMinutes("9:00", "18:30") === 480, "09:00-18:30 minus 90 minutes = 480 minutes");
+  check("Night work before extra break", utilities.computeWorkMinutes("21:00", "6:00") === 480, "21:00-next day 06:00 minus 60 minutes = 480 minutes");
+  check("Night work at extra break boundary", utilities.computeWorkMinutes("21:00", "6:30") === 480, "21:00-next day 06:30 minus 90 minutes = 480 minutes");
+  check("Night work after extra break boundary", utilities.computeWorkMinutes("21:00", "7:00") === 510, "21:00-next day 07:00 minus 90 minutes = 510 minutes");
+  check("Overnight work-time at midnight", utilities.computeWorkMinutes("9:00", "0:00") === 840, "09:00-next day 00:00 minus 60 minutes = 840 minutes");
+  check("Overnight work-time at 03:00", utilities.computeWorkMinutes("9:00", "3:00") === 1020, "09:00-next day 03:00 minus 60 minutes = 1020 minutes");
   const workDate = new Date(2026, 6, 16, 9, 0);
   check("Overnight sheet serial at midnight", utilities.timeToAttendanceSheetSerial(new Date(2026, 6, 17, 0, 0), workDate) === 1, "Next-day 00:00 stored as 1.0");
   check("Overnight sheet serial at 03:00", utilities.timeToAttendanceSheetSerial(new Date(2026, 6, 17, 3, 0), workDate) === 1.125, "Next-day 03:00 stored as 1.125");
