@@ -30,6 +30,9 @@ check("Leave candidate helper", /function buildLeaveCandidates_/.test(requestSou
 check("Correction request API", /function submitAttendanceCorrectionRequest/.test(requestSource), "API exists");
 check("Correction request log reuse", /appendAttendanceLog/.test(requestSource), "Existing attendance log writer");
 check("Correction duplicate guard", /function findPendingAttendanceRequest_/.test(requestSource), "Duplicate pending request guard");
+check("Admin correction processing API", /function processAttendanceCorrectionRequest/.test(requestSource), "Admin request API exists");
+check("Admin correction authorization", /function processAttendanceCorrectionRequest[\s\S]*adminEmployeeId[\s\S]*CONFIG\.adminEmployeeId/.test(requestSource), "Admin ID is verified");
+check("Correction request completion state", /function readPendingAttendanceRequests_[\s\S]*row\[10\]/.test(requestSource), "Processed requests are closed");
 const employeeRequestIds = [
   "leaveCandidateNotice",
   "leaveCandidateReviewBtn",
@@ -44,6 +47,8 @@ const employeeRequestIds = [
 check("Employee request UI", employeeRequestIds.every((id) => new RegExp(`id=["']${id}["']`).test(html)), "Leave candidate and correction request controls");
 check("Employee request API binding", /callServer\(["']submitAttendanceCorrectionRequest["']/.test(html), "Client submits request to Apps Script");
 check("Admin pending request UI", /id=["']adminPendingRequestCount["']/.test(html) && /id=["']adminPendingRequestRows["']/.test(html) && /function renderPendingAttendanceRequests/.test(html), "Pending request count and list");
+check("Admin correction dialog", ["adminRequestDetailModal", "adminRequestFinalValue", "adminRequestApprove", "adminRequestReject"].every((id) => new RegExp(`id=["']${id}["']`).test(html)), "Admin dialog controls exist");
+check("Admin correction API binding", /callServer\(["']processAttendanceCorrectionRequest["']/.test(html), "Admin actions call Apps Script");
 check("Admin 60-second refresh", /function startAdminAutoRefresh/.test(html) && /60000/.test(html), "Visible administrator polling interval");
 check("Admin immediate refresh", /startAdminAutoRefresh\(\{\s*refreshNow:\s*true\s*\}\)/.test(html) && /settings\.refreshNow/.test(html), "Refresh immediately when the administrator view opens or resumes");
 check("Statistics work info two-column layout", /\.stats-info-card\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s.test(html), "Average clock-in and clock-out share one row");
@@ -313,6 +318,34 @@ try {
   check("Leave candidate weekday rules", JSON.stringify(candidates.map((row) => row.date)) === JSON.stringify(["2026. 7. 20"]), "Only prior empty weekday is a candidate");
 } catch (error) {
   check("Leave candidate weekday rules", false, error.message);
+}
+
+try {
+  const decisionHelpers = new Function(
+    "parseTimeToMinutes",
+    requestSource + "; return { normalizeAttendanceCorrectionFinalValue_, getAttendanceCorrectionRejectionReason_ };"
+  )((value) => {
+    const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return hours < 24 && minutes < 60 ? hours * 60 + minutes : null;
+  });
+  let invalidTimeRejected = false;
+  let invalidReasonRejected = false;
+  try { decisionHelpers.normalizeAttendanceCorrectionFinalValue_("clockIn", "8:15"); } catch (error) { invalidTimeRejected = true; }
+  try { decisionHelpers.getAttendanceCorrectionRejectionReason_("other"); } catch (error) { invalidReasonRejected = true; }
+  check(
+    "Admin correction decision validation",
+    decisionHelpers.normalizeAttendanceCorrectionFinalValue_("clockOut", "8:30") === "8:30"
+      && decisionHelpers.normalizeAttendanceCorrectionFinalValue_("leave", "0.5") === "0.5"
+      && decisionHelpers.getAttendanceCorrectionRejectionReason_("evidenceRequired") === "증빙 또는 추가 확인 필요"
+      && invalidTimeRejected
+      && invalidReasonRejected,
+    "Final values and fixed rejection reasons are validated"
+  );
+} catch (error) {
+  check("Admin correction decision validation", false, error.message);
 }
 
 try {
