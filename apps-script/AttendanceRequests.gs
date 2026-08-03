@@ -1,5 +1,11 @@
 var ATTENDANCE_REQUEST_PREFIX_ = '\uADFC\uD0DC \uC218\uC815 \uC694\uCCAD';
 var ATTENDANCE_REQUEST_KINDS_ = Object.freeze(['clockIn', 'clockOut', 'leave']);
+var ATTENDANCE_REQUEST_REJECTION_REASONS_ = Object.freeze({
+  existingRecord: '기존 기록과 일치함',
+  timeUnverified: '요청 시간을 확인할 수 없음',
+  insufficientReason: '요청 사유가 충분하지 않음',
+  evidenceRequired: '증빙 또는 추가 확인 필요'
+});
 
 function buildLeaveCandidates_(attendanceRows, holidayMap, now) {
   const todayTimestamp = stripTime(now instanceof Date ? now : new Date()).getTime();
@@ -82,6 +88,135 @@ function submitAttendanceCorrectionRequest(request) {
   };
 }
 
+function processAttendanceCorrectionRequest(request) {
+  const input = request || {};
+  const adminEmployeeId = String(input.adminEmployeeId || '').trim();
+  if (adminEmployeeId !== CONFIG.adminEmployeeId) {
+    throw new Error('관리자 계정에서만 처리할 수 있습니다.');
+  }
+
+  const requestRow = Number(input.requestRow);
+  const action = String(input.action || '').trim();
+  if (!Number.isInteger(requestRow) || requestRow < 2 || ['approve', 'reject'].indexOf(action) < 0) {
+    throw new Error('처리할 근태 수정 요청을 확인해 주세요.');
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) {
+    throw new Error('다른 관리자가 요청을 처리 중입니다. 잠시 후 다시 시도해 주세요.');
+  }
+
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
+    const logSheet = getAttendanceLogSheet(ss);
+    if (requestRow > logSheet.getLastRow()) {
+      throw new Error('근태 수정 요청을 찾을 수 없습니다.');
+    }
+
+    const logRow = logSheet.getRange(requestRow, 1, 1, 12).getDisplayValues()[0];
+    const parsedType = parseAttendanceRequestType_(logRow[3]);
+    if (!parsedType) {
+      throw new Error('근태 수정 요청을 찾을 수 없습니다.');
+    }
+    if (String(logRow[10] || '').trim() || String(logRow[11] || '').trim()) {
+      throw new Error('이미 처리된 수정 요청입니다.');
+    }
+
+    const employeeId = String(logRow[1] || '').trim();
+    const targetDate = normalizeAttendanceRequestDate_(logRow[0]);
+    const employee = findEmployeeById(ss, employeeId);
+    if (!employee || !targetDate) {
+      throw new Error('요청 대상 직원 또는 날짜를 확인할 수 없습니다.');
+    }
+
+    let finalValue = '';
+    let resultLabel = '';
+    if (action === 'approve') {
+      finalValue = normalizeAttendanceCorrectionFinalValue_(parsedType.kind, input.finalValue);
+      applyAttendanceCorrection_(ss, employee, targetDate, parsedType.kind, finalValue);
+      resultLabel = '승인: ' + finalValue;
+    } else {
+      resultLabel = '반려: ' + getAttendanceCorrectionRejectionReason_(input.rejectionReason);
+    }
+
+    const processedAt = formatDateTime(new Date());
+    logSheet.getRange(requestRow, 4).setValue(String(logRow[3] || '').trim() + ' | ' + resultLabel);
+    logSheet.getRange(requestRow, 11, 1, 2).setValues([[processedAt, adminEmployeeId]]);
+    SpreadsheetApp.flush();
+
+    return {
+      ok: true,
+      status: action === 'approve' ? 'approved' : 'rejected',
+      employeeId,
+      name: employee.name,
+      targetDate,
+      kind: parsedType.kind,
+      finalValue,
+      message: action === 'approve' ? '근태 수정 요청을 승인했습니다.' : '근태 수정 요청을 반려했습니다.'
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function applyAttendanceCorrection_(ss, employee, targetDate, kind, finalValue) {
+  const sheet = getRequiredSheet(ss, CONFIG.attendanceSheetName);
+  const block = findEmployeeBlock(sheet, employee.name);
+  const parsedDate = parseSheetDateText(targetDate);
+  const date = parsedDate ? new Date(parsedDate.year, parsedDate.month - 1, parsedDate.day) : null;
+  const targetRow = date ? findDateRow_(sheet, date) : 0;
+  if (!targetRow) {
+    throw new Error('해당 날짜의 근태 기록을 찾을 수 없습니다.');
+  }
+
+  if (kind === 'leave') {
+    sheet.getRange(targetRow, block.startColumn + 5).setValue(Number(finalValue));
+    return;
+  }
+
+  const finalMinutes = parseTimeToMinutes(finalValue);
+  let dayOffset = 0;
+  if (kind === 'clockOut') {
+    const clockInText = sheet.getRange(targetRow, block.clockInColumn).getDisplayValue();
+    const clockInMinutes = parseTimeToMinutes(clockInText);
+    dayOffset = clockInMinutes !== null && finalMinutes < clockInMinutes ? 1 : 0;
+  }
+
+  const targetColumn = kind === 'clockIn' ? block.clockInColumn : block.clockOutColumn;
+  sheet.getRange(targetRow, targetColumn)
+    .setValue(dayOffset + finalMinutes / 1440)
+    .setNumberFormat('h:mm');
+}
+
+function normalizeAttendanceCorrectionFinalValue_(kind, value) {
+  const requestedKind = String(kind || '').trim();
+  if (requestedKind === 'leave') {
+    const leaveValue = String(value || '').trim();
+    if (leaveValue !== '1' && leaveValue !== '0.5') {
+      throw new Error('연차는 전일 또는 반일만 선택할 수 있습니다.');
+    }
+    return leaveValue;
+  }
+
+  if (requestedKind !== 'clockIn' && requestedKind !== 'clockOut') {
+    throw new Error('수정할 근태 항목을 확인할 수 없습니다.');
+  }
+
+  const normalized = normalizeHalfHourTime_(value);
+  if (!normalized) {
+    throw new Error('시간은 30분 단위로 선택해 주세요.');
+  }
+  return normalized;
+}
+
+function getAttendanceCorrectionRejectionReason_(code) {
+  const reason = ATTENDANCE_REQUEST_REJECTION_REASONS_[String(code || '').trim()];
+  if (!reason) {
+    throw new Error('반려 사유를 선택해 주세요.');
+  }
+  return reason;
+}
+
 function readPendingAttendanceRequests_(ss, attendanceRowsByEmployee) {
   const sheet = getAttendanceLogSheet(ss);
   const lastRow = sheet.getLastRow();
@@ -92,6 +227,9 @@ function readPendingAttendanceRequests_(ss, attendanceRowsByEmployee) {
 
   const values = sheet.getRange(2, 1, lastRow - 1, 12).getDisplayValues();
   return values.reduce(function (requests, row, index) {
+    if (String(row[10] || '').trim() || String(row[11] || '').trim()) {
+      return requests;
+    }
     const parsedType = parseAttendanceRequestType_(row[3]);
     if (!parsedType) {
       return requests;
